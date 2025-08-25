@@ -1,6 +1,6 @@
 # IBC Middleware Research Data Collection
 # This file tracks middleware implementations across blockchain networks
-# Research Agent: Monitoring and documenting IBC middleware patterns
+# Research Agent: Monitoring and documenting IBC middleware logic
 
 research_metadata:
   created_date: "2025-08-25"
@@ -265,9 +265,9 @@ middleware_template:
       documentation_files: []
       proto_files: []
 
-# Analysis patterns discovered from baseline
-analysis_patterns:
-  common_patterns:
+# Analysis logic discovered from baseline
+analysis_logic:
+  common_logic:
     keeper_initialization:
       - "Standard keeper instantiation with app.NewKeeper() pattern"
       - "Keeper stored in app struct with specific key"
@@ -284,7 +284,7 @@ analysis_patterns:
       - "InitGenesis/ExportGenesis in keeper"
       - "Module registration in app.go"
       
-    upgrade_patterns:
+    upgrade_logic:
       - "Migration support via migrator"
       - "Version-specific upgrade handlers"
       - "Backward compatibility considerations"
@@ -357,7 +357,7 @@ comparison_matrices:
     ibc_go_v8: ["async-icq", "ibc-hooks"]
     ibc_go_v10: ["rate-limiting", "packet-forward-middleware"]
     
-  implementation_patterns:
+  implementation_logic:
     standard_middleware: ["rate-limiting", "packet-forward-middleware"]
     dual_layer_middleware: ["ibc-hooks"]
     ibc_module: ["async-icq"]
@@ -368,9 +368,9 @@ research_findings:
     - "Four middleware/module implementations in ibc-apps repository"
     - "Mixed IBC-Go versions (v8.x and v10.x) across modules"
     - "Consistent Cosmos SDK v0.50.x usage"
-    - "Three distinct implementation patterns identified"
+    - "Three distinct implementation logic identified"
     
-  key_patterns:
+  key_logic:
     - "Standard IBCMiddleware interface implementation"
     - "Keeper-based state management"
     - "ICS4 wrapper pattern for packet hooks"
@@ -391,7 +391,7 @@ research_findings:
     - "Clear separation between middleware (wraps) and modules (standalone)"
     - "ICS4 middleware allows packet interception"
     - "BeginBlock/EndBlock support for time-based operations"
-    - "Genesis vs upgrade initialization patterns"
+    - "Genesis vs upgrade initialization logic"
     
   implementation_quality:
     - "Comprehensive protobuf definitions"
@@ -404,7 +404,7 @@ agent_status:
   current_phase: "baseline_established"
   next_steps:
     - "Begin analysis of production chain implementations"
-    - "Compare patterns against baseline"
+    - "Compare logic against baseline"
     - "Document variations and customizations"
     - "Build comprehensive compatibility matrix"
     - "Identify adoption trends across ecosystem"

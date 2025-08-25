@@ -2,17 +2,17 @@
 
 ## Executive Summary
 
-This guide provides production-tested patterns for integrating IBC middleware across different IBC-go versions (v7, v8, v10). Based on analysis of five production chains (Gaia, Juno, Neutron, Osmosis, Noble) and the ibc-apps reference implementations.
+This guide provides production-tested logic for integrating IBC middleware across different IBC-go versions (v7, v8, v10). Based on analysis of five production chains (Gaia, Juno, Neutron, Osmosis, Noble) and the ibc-apps reference implementations.
 
 ## Table of Contents
 
 1. [Middleware Overview](#middleware-overview)
-2. [Production Implementation Patterns](#production-implementation-patterns)
+2. [Production Implementation logic](#production-implementation-logic)
 3. [Version-Specific Integration](#version-specific-integration)
 4. [Critical Integration Points](#critical-integration-points)
 5. [Testing and Validation](#testing-and-validation)
 6. [Troubleshooting Guide](#troubleshooting-guide)
-7. [Migration Patterns](#migration-patterns)
+7. [Migration logic](#migration-logic)
 
 ## Middleware Overview
 
@@ -35,7 +35,7 @@ Packet Flow:
 - RecvPacket: IBC Core -> Middleware (top to bottom) -> App
 ```
 
-## Production Implementation Patterns
+## Production Implementation logic
 
 ### Pattern 1: Gaia (IBC-go v10 with Callbacks)
 
@@ -392,7 +392,7 @@ app.TransferKeeper.WithICS4Wrapper(cbStack)
 - Use IBC Callbacks for v10+
 - Never use both in same stack
 
-## Migration Patterns
+## Migration logic
 
 ### Upgrading from v7 to v8
 

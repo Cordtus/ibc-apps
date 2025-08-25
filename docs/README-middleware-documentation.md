@@ -9,7 +9,7 @@ This directory contains comprehensive documentation for IBC middleware integrati
 ### Core Documents
 
 1. **[Middleware Integration Comprehensive Guide](./middleware-integration-comprehensive-guide.md)**
-   - Complete integration patterns for IBC middleware
+   - Complete integration logic for IBC middleware
    - Version-specific instructions (v7, v8, v10)
    - Production-tested code examples
    - Troubleshooting and migration guides
@@ -29,7 +29,7 @@ This directory contains comprehensive documentation for IBC middleware integrati
 4. **[IBC Callbacks Integration Guide](./ibc-callbacks-integration.md)**
    - Native v10 callbacks implementation
    - Migration from IBC Hooks
-   - Contract integration patterns
+   - Contract integration logic
    - Production examples
 
 5. **[Packet Forward Middleware Documentation](./packet-forward-middleware/docs/integration.md)**
@@ -42,17 +42,17 @@ This directory contains comprehensive documentation for IBC middleware integrati
 6. **[Production Chain Analysis](./production-chain-analysis.yaml)**
    - Systematic inspection of 5 production chains
    - Gaia, Juno, Neutron, Osmosis, Noble
-   - Actual implementation patterns
+   - Actual implementation logic
    - Version and dependency tracking
 
 7. **[Middleware Research Data](./middleware-research-data.yaml)**
    - Baseline middleware specifications
    - Version compatibility matrix
-   - Implementation patterns
+   - Implementation logic
 
 8. **[Wiring Reference](./wiring-reference.md)**
    - Technical wiring guidelines
-   - Interface patterns
+   - Interface logic
    - Middleware composition
    - Security considerations
 
@@ -77,7 +77,7 @@ This directory contains comprehensive documentation for IBC middleware integrati
 
 ## Key Findings
 
-### Production Patterns
+### Production logic
 
 1. **Middleware Adoption**:
    - Packet Forward Middleware: 5/5 chains (universal)
@@ -128,7 +128,7 @@ This directory contains comprehensive documentation for IBC middleware integrati
 
 1. Check troubleshooting sections in each guide
 2. Review [Consolidated Questions](./consolidated-expert-questions-and-uncertainties.md) for common issues
-3. Compare with [Production Chain Analysis](./production-chain-analysis.yaml) patterns
+3. Compare with [Production Chain Analysis](./production-chain-analysis.yaml) logic
 4. Verify against expert-identified concerns
 
 ## Documentation Standards
@@ -149,7 +149,7 @@ This documentation has been:
 1. **Systematically Researched**: Analysis of 5 production chains
 2. **Expert Reviewed**: Three independent Golang experts
 3. **Cross-Referenced**: Against official IBC documentation
-4. **Production Tested**: All patterns from working chains
+4. **Production Tested**: All logic from working chains
 5. **Citation Verified**: Every claim has source reference
 
 ## Future Improvements
@@ -171,7 +171,7 @@ When adding to this documentation:
 1. Follow the established style guide
 2. Include source citations for all claims
 3. Test code examples before documenting
-4. Update the production chain analysis if patterns change
+4. Update the production chain analysis if logic change
 5. Address uncertainties in the consolidated questions document
 
 ## Support Resources

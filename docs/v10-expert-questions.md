@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document contains questions and observations from a Golang perspective regarding IBC middleware integration patterns for IBC-go v10 compatibility. The analysis covers implementation requirements, unclear integration points, and missing information needed for successful integration.
+This document contains questions and observations from a Golang perspective regarding IBC middleware integration logic for IBC-go v10 compatibility. The analysis covers implementation requirements, unclear integration points, and missing information needed for successful integration.
 
 ## Version Compatibility Matrix
 
@@ -154,7 +154,7 @@ if err := transfertypes.ModuleCdc.UnmarshalJSON(packet.GetData(), &data); err !=
 
 ### 2. Acknowledgement Handling
 
-Different acknowledgement patterns:
+Different acknowledgement logic:
 
 ```go
 // Rate limiting
@@ -229,7 +229,7 @@ Mixed versions in the codebase raise concerns:
 
 ## Testing and Validation
 
-### 1. Unit Testing Patterns
+### 1. Unit Testing logic
 
 Standard testify usage but with SDK-specific setup:
 
@@ -274,7 +274,7 @@ forwardTimeout   time.Duration
 
 ## Error Handling and Logging
 
-### 1. Error Patterns
+### 1. Error logic
 
 Different error handling approaches:
 
@@ -289,7 +289,7 @@ return newErrorAcknowledgement(fmt.Errorf("packet-forward-middleware error: %s",
 **Questions**:
 - What error types should be returned vs logged?
 - How do error acknowledgements get processed by receiving chains?
-- What logging levels and patterns are recommended?
+- What logging levels and logic are recommended?
 
 ## Implementation Priority Questions
 

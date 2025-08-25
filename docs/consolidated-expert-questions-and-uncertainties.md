@@ -33,7 +33,7 @@ This document consolidates all questions raised by the Golang experts reviewing 
 5. **What determines the correct ordering of middleware in the stack?**
    - Source: v10 expert
    - Question: "Why must rate limiting be outermost and callbacks innermost?"
-   - Status: Addressed with production patterns
+   - Status: Addressed with production logic
 
 6. **How are packets actually routed through the middleware stack?**
    - Source: v7 expert
@@ -176,10 +176,10 @@ This document consolidates all questions raised by the Golang experts reviewing 
    - Potential conflicts unexplored
    - Migration path needs testing
 
-### Uncertain Patterns
+### Uncertain logic
 
 4. **Genesis vs Upgrade Integration**
-   - Different initialization patterns observed
+   - Different initialization logic observed
    - Migration complexity not fully documented
    - State migration requirements unclear
 
@@ -203,7 +203,7 @@ This document consolidates all questions raised by the Golang experts reviewing 
 8. **Subspace and Parameter Management**
    - Each middleware needs subspace
    - Parameter migration on upgrades
-   - Governance integration patterns
+   - Governance integration logic
 
 9. **ICA Integration with Middleware**
    - How middleware affects ICA packets
@@ -216,7 +216,7 @@ This document consolidates all questions raised by the Golang experts reviewing 
 
 1. Complete interface definitions for all versions
 2. Store key and state management documentation
-3. Error handling patterns and best practices
+3. Error handling logic and best practices
 4. Testing strategy and mock implementations
 
 ### Medium Priority (Important for Production)
@@ -231,11 +231,11 @@ This document consolidates all questions raised by the Golang experts reviewing 
 9. Custom middleware development guide
 10. Advanced testing scenarios
 11. Cross-chain debugging techniques
-12. Middleware composition patterns
+12. Middleware composition logic
 
 ## Recommendations for Documentation
 
-1. **Add Golang Perspective Section**: Explain patterns from pure Go viewpoint
+1. **Add Golang Perspective Section**: Explain logic from pure Go viewpoint
 2. **Include Interface Definitions**: Complete signatures for all versions
 3. **Provide Working Examples**: Full application examples that compile
 4. **Create Decision Trees**: When to use which middleware
@@ -250,7 +250,7 @@ All three experts agree on these critical needs:
 
 1. **Complete interface documentation is essential**
 2. **Initialization order must be clearly specified**
-3. **Error handling patterns need clarification**
+3. **Error handling logic need clarification**
 4. **Testing strategies require examples**
 5. **Version compatibility matrix is critical**
 6. **Production examples are most valuable**
@@ -261,7 +261,7 @@ All three experts agree on these critical needs:
 2. Create minimal working examples for each version
 3. Develop comprehensive testing guide
 4. Benchmark middleware performance
-5. Document state management patterns
+5. Document state management logic
 6. Create migration test suites
 7. Establish security best practices
 8. Build debugging and monitoring guides

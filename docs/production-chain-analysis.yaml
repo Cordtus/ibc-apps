@@ -349,7 +349,7 @@ chains:
       ibc_callbacks:
         present: false
 
-patterns_observed:
+logic_observed:
   stack_ordering:
     - "Rate limiting typically outermost for security"
     - "Packet forward middleware usually in middle"
@@ -366,7 +366,7 @@ patterns_observed:
     - "v10 emerging with Gaia using native callbacks"
     - "Custom implementations common (Neutron, Osmosis rate limiting)"
     
-  initialization_patterns:
+  initialization_logic:
     - "PFM keeper initialized with nil transfer keeper to avoid circular dependency"
     - "SetTransferKeeper called after transfer keeper creation"
     - "WASM contract keeper set after WASM keeper initialization"

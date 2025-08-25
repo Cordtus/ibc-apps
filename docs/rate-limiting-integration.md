@@ -356,7 +356,7 @@ simd tx ratelimit blacklist-channel channel-X --from authority
 ```
 
 3. **Monitor and Adjust**:
-- Watch for transaction patterns
+- Watch for transaction logic
 - Adjust limits based on legitimate traffic needs
 - Consider full channel pause if necessary
 
@@ -488,7 +488,7 @@ const (
 ## Security Considerations
 
 1. **Always place rate limiting as the outermost middleware layer** to ensure packets are checked before any processing
-2. **Set conservative initial limits** and adjust based on actual usage patterns
+2. **Set conservative initial limits** and adjust based on actual usage logic
 3. **Monitor for bypass attempts** through transaction batching or channel hopping
 4. **Maintain an incident response plan** for rapid limit adjustments
 5. **Consider different limits for different asset risk profiles**
@@ -502,7 +502,7 @@ const (
 
 ### From v8 to v10
 - No breaking changes in rate limiting module
-- Update to work with new IBC-go v10 stack patterns
+- Update to work with new IBC-go v10 stack logic
 - Consider integration with callbacks middleware if using
 
 ## Support

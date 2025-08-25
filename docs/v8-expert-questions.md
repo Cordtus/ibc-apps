@@ -14,7 +14,7 @@
 3. **What are the migration paths from v8 to v10?** The research shows newer modules use v10
 4. **Can v8 and v10 middleware coexist in the same application?**
 
-### Interface Patterns
+### Interface logic
 **UNCLEAR**: Multiple interface types mentioned without clear definitions:
 
 5. **What is the `porttypes.IBCModule` interface contract?** All middleware implement this
@@ -60,7 +60,7 @@
 27. **What is `ibcRouter` and how do you obtain it?** Not shown in other modules
 28. **Why is async-icq a module vs middleware?** Research notes this distinction
 29. **What is the difference between modules and middleware at runtime?** Architectural question
-30. **How do you register IBC modules vs middleware?** Different registration patterns shown
+30. **How do you register IBC modules vs middleware?** Different registration logic shown
 
 ## Implementation Architecture Questions
 
@@ -68,7 +68,7 @@
 31. **How do you resolve circular dependencies?** Middleware depend on each other and core modules
 32. **What is the proper initialization order?** Multiple keepers and middleware need sequencing
 33. **How do you handle optional dependencies?** Some middleware may not be present
-34. **What happens if dependency injection fails?** Error handling patterns not shown
+34. **What happens if dependency injection fails?** Error handling logic not shown
 
 ### Storage and State Management
 35. **What is the underlying storage mechanism for "store keys"?** Golang interface unclear
@@ -95,12 +95,12 @@
 ### IBC-go v8 Specific
 49. **What are the v8 API breaking changes from earlier versions?** Migration path unclear
 50. **Which Cosmos SDK versions are compatible with IBC-go v8?** Research shows variations
-51. **Are there deprecated patterns in v8 that should be avoided?** Future-proofing concerns
+51. **Are there deprecated logic in v8 that should be avoided?** Future-proofing concerns
 52. **What are the minimum Go version requirements for v8?** Research shows Go 1.21-1.23.6 range
 
 ### Forward Compatibility
-53. **Which patterns will break when upgrading to v10?** Planning for future upgrades
-54. **Are there v8-compatible patterns that ease v10 migration?** Best practices
+53. **Which logic will break when upgrading to v10?** Planning for future upgrades
+54. **Are there v8-compatible logic that ease v10 migration?** Best practices
 55. **Should new implementations target v8 or skip to v10?** Strategic decision
 56. **What is the upstream maintenance status of v8?** Long-term support concerns
 
@@ -109,13 +109,13 @@
 ### Configuration Management
 57. **How do you configure middleware parameters at runtime?** No configuration examples
 58. **What parameters are configurable via governance?** Research mentions governance support
-59. **How do you handle configuration validation?** Parameter validation patterns
+59. **How do you handle configuration validation?** Parameter validation logic
 60. **What are the configuration file formats and locations?** Deployment concerns
 
 ### Error Handling
 61. **What error types can middleware return?** Error interface contracts
 62. **How do errors propagate through middleware stacks?** Error handling chain
-63. **Are there retry mechanisms built into the framework?** Resilience patterns
+63. **Are there retry mechanisms built into the framework?** Resilience logic
 64. **How do you handle partial failures in middleware chains?** Transaction-like semantics
 
 ### Observability and Debugging
@@ -128,16 +128,16 @@
 
 ### Memory Management
 69. **Are there memory leaks to avoid in keeper implementations?** Long-running process concerns
-70. **How do you handle large packet payloads efficiently?** Memory usage patterns
+70. **How do you handle large packet payloads efficiently?** Memory usage logic
 71. **What are the garbage collection implications?** Performance under load
 
 ### Concurrency
-72. **Are keeper methods thread-safe?** Concurrent access patterns
+72. **Are keeper methods thread-safe?** Concurrent access logic
 73. **How do you handle concurrent packet processing?** Race condition prevention
 74. **What synchronization primitives are used internally?** Understanding internal locking
 
 ### Interface Design
-75. **Are interfaces designed for testability?** Mock-friendly patterns
+75. **Are interfaces designed for testability?** Mock-friendly logic
 76. **How do you extend middleware functionality?** Plugin architecture
 77. **What are the stability guarantees of interfaces?** API evolution concerns
 
@@ -147,12 +147,12 @@
 - Complete interface definitions with method signatures
 - Concrete examples of keeper implementations  
 - Step-by-step initialization sequences
-- Error handling patterns and error types
+- Error handling logic and error types
 - Basic configuration examples
 
 ### Nice-to-Have Information
 - Performance benchmarks and scaling characteristics
-- Production deployment patterns
+- Production deployment logic
 - Monitoring and alerting setup
 - Advanced configuration options
 - Debugging and troubleshooting guides
@@ -177,14 +177,14 @@
 
 **MEDIUM RISK**:
 - Configuration management
-- Error handling patterns
+- Error handling logic
 - Testing setup complexity
 
 **LOW RISK**:
-- Basic Golang patterns
+- Basic Golang logic
 - Standard library usage
 - File organization
 
 ---
 
-**Next Steps**: Focus research on v8-specific implementations with complete interface definitions and concrete examples rather than abstract patterns.
+**Next Steps**: Focus research on v8-specific implementations with complete interface definitions and concrete examples rather than abstract logic.

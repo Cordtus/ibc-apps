@@ -15,11 +15,11 @@
 
 ## Overview
 
-IBC Callbacks is a native middleware in ibc-go v10+ that provides standardized callback functionality for IBC packet lifecycle events. It enables secondary applications (smart contracts, modules) to register callbacks that execute during packet processing, enabling complex cross-chain composability patterns.
+IBC Callbacks is a native middleware in ibc-go v10+ that provides standardized callback functionality for IBC packet lifecycle events. It enables secondary applications (smart contracts, modules) to register callbacks that execute during packet processing, enabling complex cross-chain composability logic.
 
 ### Key Features
 - **Native Integration**: Built into ibc-go v10+ core, no external dependencies
-- **Standardized Interface**: Consistent callback patterns across all IBC applications
+- **Standardized Interface**: Consistent callback logic across all IBC applications
 - **Gas Management**: Configurable gas limits with proper revert handling
 - **Packet Lifecycle Coverage**: Callbacks for send, receive, acknowledgment, and timeout
 - **Better PFM Integration**: Designed to work seamlessly with packet forward middleware
@@ -130,7 +130,7 @@ This is the critical integration step. The order matters significantly:
 
 ```go
 // Configure the transfer stack with callbacks and packet forward middleware
-// Based on ibc-go v10 integration patterns
+// Based on ibc-go v10 integration logic
 
 // Set maximum gas for callback execution
 maxCallbackGas := uint64(10_000_000) // 10M gas

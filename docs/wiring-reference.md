@@ -1,14 +1,14 @@
 # IBC Middleware Wiring Technical Guidelines
 
-Comprehensive technical documentation for integrating IBC middleware in ibc-go versions 7, 8, and 10, covering interface patterns, middleware composition, real-world examples, and safety considerations for Cosmos chain developers. **All code examples verified against production implementations as of August 2025.**
+Comprehensive technical documentation for integrating IBC middleware in ibc-go versions 7, 8, and 10, covering interface logic, middleware composition, real-world examples, and safety considerations for Cosmos chain developers. **All code examples verified against production implementations as of August 2025.**
 
 ## Code Accuracy Verification
 //**remove this part, this is only for your context/reference**//
 All code examples in this document have been cross-referenced with:
-- **ibc-go repository**: Latest interface definitions and implementation patterns from cosmos/ibc-go
+- **ibc-go repository**: Latest interface definitions and implementation logic from cosmos/ibc-go
 - **Packet Forward Middleware**: Current implementations from cosmos/ibc-apps and strangelove-ventures repositories  
 - **Osmosis production code**: Rate limiting and hooks middleware from osmosis-labs/osmosis
-- **Stride implementation**: Rate limiting patterns from Stride-Labs/ibc-rate-limiting
+- **Stride implementation**: Rate limiting logic from Stride-Labs/ibc-rate-limiting
 - **Migration guides**: Official ibc-go v8 to v10 migration documentation
 
 This ensures every function signature, parameter order, and integration pattern matches working blockchain implementations.
@@ -251,7 +251,7 @@ transferStack = ratelimit.NewIBCMiddleware(app.RatelimitKeeper, transferStack)
 3. **Callback mechanism overlap**: Both provide contract callback functionality through different approaches
 4. **Interface requirements**: Competing requirements for `PacketDataUnmarshaler` implementations
 
-**Choose one path (v10 patterns)**:
+**Choose one path (v10 logic)**:
 ```go
 // Path A: Callbacks middleware (integrated into ibc-go v10 core)
 cbStack := ibccallbacks.NewIBCMiddleware(
@@ -417,7 +417,7 @@ transferStack = ratelimit.NewIBCMiddleware(transferStack, app.RateLimitKeeper) /
 **Validation requirements**:
 - Each middleware must validate incoming data
 - Never trust upstream middleware validation
-- Implement proper error handling and acknowledgment patterns
+- Implement proper error handling and acknowledgment logic
 - Always validate memo field format before processing
 
 ### Common integration pitfalls
@@ -536,5 +536,5 @@ app.moduleManager = module.NewManager(
 **Primary sources**:
 - [ibc-go repository](https://github.com/cosmos/ibc-go) - Official interfaces and migration guides
 - [ibc-apps repository](https://github.com/cosmos/ibc-apps) - Packet forward middleware and hooks
-- [Osmosis repository](https://github.com/osmosis-labs/osmosis) - Rate limiting production patterns
+- [Osmosis repository](https://github.com/osmosis-labs/osmosis) - Rate limiting production logic
 - [Stride ibc-rate-limiting](https://github.com/Stride-Labs/ibc-rate-limiting) - Native golang rate limiting
