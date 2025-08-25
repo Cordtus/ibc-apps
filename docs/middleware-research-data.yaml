@@ -1,0 +1,410 @@
+# IBC Middleware Research Data Collection
+# This file tracks middleware implementations across blockchain networks
+# Research Agent: Monitoring and documenting IBC middleware patterns
+
+research_metadata:
+  created_date: "2025-08-25"
+  last_updated: "2025-08-25"
+  research_scope: "IBC middleware implementations across Cosmos ecosystem chains"
+  data_collection_status: "baseline_established"
+  total_chains_analyzed: 1
+  total_middlewares_found: 4
+  baseline_repository: "github.com/cosmos/ibc-apps"
+  
+# Baseline data from ibc-apps reference implementation
+baseline_middlewares:
+  rate_limiting:
+    version: "v10"
+    ibc_go_version: "v10.1.1"
+    cosmos_sdk_version: "v0.50.13"
+    go_version: "1.23.6"
+    source_repository: "https://github.com/cosmos/ibc-apps"
+    module_path: "modules/rate-limiting"
+    
+  packet_forward_middleware:
+    version: "v10" 
+    ibc_go_version: "v10.1.1"
+    cosmos_sdk_version: "v0.50.13"
+    go_version: "1.23.6"
+    source_repository: "https://github.com/cosmos/ibc-apps"
+    module_path: "middleware/packet-forward-middleware"
+    
+  ibc_hooks:
+    version: "v8"
+    ibc_go_version: "v8.6.1"
+    cosmos_sdk_version: "v0.50.9"
+    go_version: "1.22"
+    source_repository: "https://github.com/cosmos/ibc-apps"
+    module_path: "modules/ibc-hooks"
+    
+  async_icq:
+    version: "v8"
+    ibc_go_version: "v8.0.0"
+    cosmos_sdk_version: "v0.50.1"
+    go_version: "1.21"
+    source_repository: "https://github.com/cosmos/ibc-apps"
+    module_path: "modules/async-icq"
+    note: "This is an IBC module, not middleware"
+
+research_data:
+  chains:
+    ibc_apps_baseline:
+      chain_info:
+        name: "IBC Apps Reference Implementation"
+        binary: "N/A"
+        ibc_go_version: "v10.1.1/v8.6.1 (mixed)"
+        cosmos_sdk_version: "v0.50.13/v0.50.9 (mixed)"
+        analyzed: true
+        analysis_date: "2025-08-25"
+      middlewares:
+        rate_limiting:
+          present: true
+          version: "v10"
+          ibc_go_version: "v10.1.1"
+          cosmos_sdk_version: "v0.50.13"
+          source_repository: "github.com/cosmos/ibc-apps"
+          initialization:
+            keeper_pattern: |
+              // File: /modules/rate-limiting/testing/simapp/app.go:494
+              var transferStack ibcporttypes.IBCModule = transfer.NewIBCModule(app.TransferKeeper)
+              transferStack = ratelimit.NewIBCMiddleware(app.RatelimitKeeper, transferStack)
+            constructor: "NewIBCMiddleware(k keeper.Keeper, app porttypes.IBCModule) IBCMiddleware"
+            store_keys: ["ratelimit"]
+            dependencies: ["transfer", "bank", "ibc"]
+          stack_configuration:
+            position: "wraps transfer module"
+            wraps: "transfer"
+            wrapped_by: "none in baseline"
+          genesis_vs_upgrade:
+            type: "genesis"
+            has_begin_block: true
+          testing:
+            unit_tests: ["/keeper/*_test.go"]
+            integration_tests: ["/testing/simapp/"]
+            e2e_tests: ["/e2e/"]
+          references:
+            source_files: ["/ibc_middleware.go", "/keeper/", "/types/"]
+            proto_files: ["/proto/ratelimit/"]
+
+        packet_forward_middleware:
+          present: true
+          version: "v10"
+          ibc_go_version: "v10.1.1"
+          cosmos_sdk_version: "v0.50.13"
+          source_repository: "github.com/cosmos/ibc-apps"
+          initialization:
+            keeper_pattern: |
+              // File: /test/setup.go:137
+              return packetforward.NewIBCMiddleware(app, k, retriesOnTimeout, forwardTimeout)
+            constructor: "NewIBCMiddleware(app porttypes.IBCModule, k *keeper.Keeper, retriesOnTimeout uint8, forwardTimeout time.Duration)"
+            store_keys: ["packetforward"]
+            dependencies: ["transfer", "ibc"]
+          stack_configuration:
+            position: "can wrap any IBC module"
+            wraps: "configurable (typically transfer)"
+            wrapped_by: "none in baseline"
+          genesis_vs_upgrade:
+            type: "genesis"
+            has_migrations: true
+          testing:
+            unit_tests: ["/test/"]
+            integration_tests: ["/testing/"]
+            e2e_tests: ["/e2e/"]
+          references:
+            source_files: ["/ibc_middleware.go", "/keeper/", "/types/"]
+            proto_files: ["/proto/packetforward/"]
+
+        ibc_hooks:
+          present: true
+          version: "v8"
+          ibc_go_version: "v8.6.1"
+          cosmos_sdk_version: "v0.50.9"
+          source_repository: "github.com/cosmos/ibc-apps"
+          initialization:
+            keeper_pattern: |
+              // File: /simapp/app.go:598-599
+              hooksICS4Wrapper := ibchooks.NewICS4Middleware(app.IBCKeeper.ChannelKeeper, ics20WasmHooks)
+              // Then used in transfer keeper initialization
+            constructor: "NewIBCMiddleware(app porttypes.IBCModule, ics4 *ICS4Middleware)"
+            store_keys: ["hooks"]
+            dependencies: ["wasm", "transfer", "ibc"]
+          stack_configuration:
+            position: "dual-layer: ICS4 wrapper + IBC middleware"
+            wraps: "transfer"
+            wrapped_by: "none in baseline"
+            special_note: "Uses ICS4Middleware pattern for packet hooks"
+          genesis_vs_upgrade:
+            type: "genesis"
+          testing:
+            unit_tests: ["/tests/unit/"]
+            integration_tests: ["/simapp/"]
+            e2e_tests: ["integrated with simapp"]
+          references:
+            source_files: ["/ibc_module.go", "/ics4_middleware.go", "/wasm_hook.go"]
+            testdata: ["/tests/unit/testdata/counter/", "/tests/unit/testdata/echo/"]
+
+        async_icq:
+          present: true
+          version: "v8"
+          ibc_go_version: "v8.0.0"
+          cosmos_sdk_version: "v0.50.1"
+          source_repository: "github.com/cosmos/ibc-apps"
+          initialization:
+            keeper_pattern: |
+              // File: /testing/demo-simapp/app/app.go:384
+              icqModule := icq.NewIBCModule(app.ICQKeeper)
+              ibcRouter.AddRoute(icqtypes.ModuleName, icqModule)
+            constructor: "NewIBCModule(k keeper.Keeper) IBCModule"
+            store_keys: ["icq"]
+            dependencies: ["ibc"]
+          stack_configuration:
+            position: "standalone IBC module (not middleware)"
+            wraps: "none"
+            wrapped_by: "none"
+            special_note: "This is an IBC application module, not middleware"
+          genesis_vs_upgrade:
+            type: "genesis"
+            has_migrations: true
+          testing:
+            unit_tests: ["/keeper/*_test.go"]
+            integration_tests: ["/testing/demo-simapp/", "/testing/simapp/"]
+            e2e_tests: ["/e2e/"]
+          references:
+            source_files: ["/ibc_module.go", "/keeper/", "/types/"]
+            proto_files: ["/proto/icq/"]
+
+    gaia:
+      chain_info:
+        name: "Cosmos Hub"
+        binary: "gaiad"
+        ibc_go_version: ""
+        cosmos_sdk_version: ""
+        analyzed: false
+        analysis_date: ""
+      middlewares: {}
+      
+    juno:
+      chain_info:
+        name: "Juno Network"
+        binary: "junod"
+        ibc_go_version: ""
+        cosmos_sdk_version: ""
+        analyzed: false
+        analysis_date: ""
+      middlewares: {}
+      
+    neutron:
+      chain_info:
+        name: "Neutron"
+        binary: "neutrond"
+        ibc_go_version: ""
+        cosmos_sdk_version: ""
+        analyzed: false
+        analysis_date: ""
+      middlewares: {}
+      
+    osmosis:
+      chain_info:
+        name: "Osmosis"
+        binary: "osmosisd"
+        ibc_go_version: ""
+        cosmos_sdk_version: ""
+        analyzed: false
+        analysis_date: ""
+      middlewares: {}
+      
+    noble:
+      chain_info:
+        name: "Noble"
+        binary: "nobled"
+        ibc_go_version: ""
+        cosmos_sdk_version: ""
+        analyzed: false
+        analysis_date: ""
+      middlewares: {}
+
+# Template for middleware documentation
+middleware_template:
+  middleware_name:
+    present: false
+    version: ""
+    ibc_go_version: ""
+    cosmos_sdk_version: ""
+    source_repository: ""
+    
+    initialization:
+      keeper_pattern: |
+        # Code snippet with file reference
+        # File: /path/to/file.go:line_number
+      store_keys: []
+      dependencies: []
+      
+    stack_configuration:
+      position: ""  # "top", "middle", "bottom" relative to transfer
+      wraps: ""     # what middleware this wraps
+      wrapped_by: "" # what middleware wraps this
+      
+    genesis_vs_upgrade:
+      type: ""      # "genesis" or "upgrade"
+      handler: |
+        # Code snippet if upgrade handler exists
+        # File: /path/to/file.go:line_number
+      migration_version: ""
+      
+    testing:
+      unit_tests: []
+      integration_tests: []
+      e2e_tests: []
+      
+    configuration:
+      params: {}
+      governance: []
+      
+    references:
+      source_files: []
+      documentation_files: []
+      proto_files: []
+
+# Analysis patterns discovered from baseline
+analysis_patterns:
+  common_patterns:
+    keeper_initialization:
+      - "Standard keeper instantiation with app.NewKeeper() pattern"
+      - "Keeper stored in app struct with specific key"
+      - "Scoped keepers used for IBC capabilities"
+      
+    middleware_wrapping:
+      - "NewIBCMiddleware(keeper, wrapped_app) pattern for rate limiting"
+      - "NewIBCMiddleware(wrapped_app, keeper, config...) for packet forward"
+      - "Dual-layer ICS4 + IBC middleware for hooks"
+      - "Direct IBC module for async-icq (not middleware)"
+      
+    genesis_handling:
+      - "Genesis state in types/genesis.go"
+      - "InitGenesis/ExportGenesis in keeper"
+      - "Module registration in app.go"
+      
+    upgrade_patterns:
+      - "Migration support via migrator"
+      - "Version-specific upgrade handlers"
+      - "Backward compatibility considerations"
+      
+    testing_approaches:
+      - "Unit tests in keeper/*_test.go"
+      - "Integration tests with simapp"
+      - "E2E tests using interchain test framework"
+      - "Test data in testdata/ directories"
+      
+  variations:
+    version_differences:
+      - "IBC-Go v8 vs v10 API differences"
+      - "Cosmos SDK v0.50.x variations"
+      - "Go version compatibility (1.21-1.23.6)"
+      
+    implementation_specific:
+      - "Rate limiting: BeginBlock handler for epoch management"
+      - "Packet forward: Timeout and retry configuration"
+      - "IBC hooks: Wasm contract integration"
+      - "Async-ICQ: Query-specific packet handling"
+    
+  compatibility_matrix:
+    ibc_go_versions:
+      v8_0_0: ["async-icq"]
+      v8_6_1: ["ibc-hooks"]
+      v10_1_1: ["rate-limiting", "packet-forward-middleware"]
+      
+    cosmos_sdk_versions:
+      v0_50_1: ["async-icq"]
+      v0_50_9: ["ibc-hooks"]
+      v0_50_13: ["rate-limiting", "packet-forward-middleware"]
+    
+# Comparison matrices (initialized with baseline data)
+comparison_matrices:
+  middleware_presence:
+    rate_limiting:
+      ibc_apps_baseline: "present"
+      gaia: "unknown"
+      juno: "unknown"
+      neutron: "unknown"
+      osmosis: "unknown" 
+      noble: "unknown"
+      
+    packet_forward_middleware:
+      ibc_apps_baseline: "present"
+      gaia: "unknown"
+      juno: "unknown"
+      neutron: "unknown"
+      osmosis: "unknown"
+      noble: "unknown"
+      
+    ibc_hooks:
+      ibc_apps_baseline: "present"
+      gaia: "unknown"
+      juno: "unknown"
+      neutron: "unknown"
+      osmosis: "unknown"
+      noble: "unknown"
+      
+    async_icq:
+      ibc_apps_baseline: "present"
+      gaia: "unknown"
+      juno: "unknown"
+      neutron: "unknown"
+      osmosis: "unknown"
+      noble: "unknown"
+      
+  version_compatibility:
+    ibc_go_v8: ["async-icq", "ibc-hooks"]
+    ibc_go_v10: ["rate-limiting", "packet-forward-middleware"]
+    
+  implementation_patterns:
+    standard_middleware: ["rate-limiting", "packet-forward-middleware"]
+    dual_layer_middleware: ["ibc-hooks"]
+    ibc_module: ["async-icq"]
+
+# Research findings and insights
+research_findings:
+  baseline_summary:
+    - "Four middleware/module implementations in ibc-apps repository"
+    - "Mixed IBC-Go versions (v8.x and v10.x) across modules"
+    - "Consistent Cosmos SDK v0.50.x usage"
+    - "Three distinct implementation patterns identified"
+    
+  key_patterns:
+    - "Standard IBCMiddleware interface implementation"
+    - "Keeper-based state management"
+    - "ICS4 wrapper pattern for packet hooks"
+    - "Comprehensive test coverage across unit/integration/e2e"
+    
+  version_compatibility_insights:
+    - "Version fragmentation within single repository"
+    - "Newer modules use IBC-Go v10, older use v8"
+    - "Migration strategies visible in migrator implementations"
+    
+  testing_strategies:
+    - "Consistent use of testify for unit tests"
+    - "SimApp pattern for integration testing"
+    - "Docker-based e2e testing"
+    - "Mock implementations for isolated testing"
+    
+  architectural_insights:
+    - "Clear separation between middleware (wraps) and modules (standalone)"
+    - "ICS4 middleware allows packet interception"
+    - "BeginBlock/EndBlock support for time-based operations"
+    - "Genesis vs upgrade initialization patterns"
+    
+  implementation_quality:
+    - "Comprehensive protobuf definitions"
+    - "CLI query/tx commands included"
+    - "Governance parameter support"
+    - "Metrics and telemetry integration"
+
+# Research agent status
+agent_status:
+  current_phase: "baseline_established"
+  next_steps:
+    - "Begin analysis of production chain implementations"
+    - "Compare patterns against baseline"
+    - "Document variations and customizations"
+    - "Build comprehensive compatibility matrix"
+    - "Identify adoption trends across ecosystem"

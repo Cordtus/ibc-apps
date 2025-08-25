@@ -1,0 +1,372 @@
+# Production Chain Middleware Analysis
+# Complete findings from systematic inspection
+
+chains:
+  gaia:
+    chain_info:
+      name: "Gaia (Cosmos Hub)"
+      binary: "gaiad"
+      ibc_go_version: "v10"
+      cosmos_sdk_version: "v0.50.13"
+      analyzed_date: "2025-08-25"
+      source_files:
+        - "/Users/cordt/repos/gaia/app/keepers/keepers.go"
+        - "/Users/cordt/repos/gaia/app/modules.go"
+    
+    middlewares:
+      rate_limiting:
+        present: true
+        version: "v10"
+        import: "github.com/cosmos/ibc-apps/modules/rate-limiting/v10"
+        initialization: |
+          # File: /Users/cordt/repos/gaia/app/keepers/keepers.go:429-436
+          appKeepers.RatelimitKeeper = *ratelimitkeeper.NewKeeper(
+              appCodec,
+              runtime.NewKVStoreService(appKeepers.keys[ratelimittypes.StoreKey]),
+              appKeepers.GetSubspace(ratelimittypes.ModuleName),
+              govAuthority,
+              appKeepers.BankKeeper,
+              appKeepers.IBCKeeper.ChannelKeeper,
+              appKeepers.IBCKeeper.ChannelKeeper, // ICS4Wrapper
+          )
+        stack_position: "outermost"
+        wraps: "packet_forward_middleware"
+        integration_pattern: |
+          # File: /Users/cordt/repos/gaia/app/keepers/keepers.go:530
+          transferStack = ratelimit.NewIBCMiddleware(appKeepers.RatelimitKeeper, transferStack)
+      
+      packet_forward_middleware:
+        present: true
+        version: "v10"
+        import: "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v10/packetforward"
+        initialization: |
+          # File: /Users/cordt/repos/gaia/app/keepers/keepers.go:452-460
+          appKeepers.PFMRouterKeeper = pfmrouterkeeper.NewKeeper(
+              appCodec,
+              runtime.NewKVStoreService(appKeepers.keys[pfmroutertypes.StoreKey]),
+              nil, // Set later with SetTransferKeeper
+              appKeepers.IBCKeeper.ChannelKeeper,
+              appKeepers.BankKeeper,
+              appKeepers.RatelimitKeeper, // ICS4Wrapper
+              govAuthority,
+          )
+          # After transfer keeper init:
+          appKeepers.PFMRouterKeeper.SetTransferKeeper(appKeepers.TransferKeeper)
+        stack_position: "middle"
+        wraps: "provider"
+        wrapped_by: "rate_limiting"
+        
+      ibc_callbacks:
+        present: true
+        version: "v10 (native)"
+        import: "github.com/cosmos/ibc-go/v10/modules/apps/callbacks"
+        initialization: |
+          # File: /Users/cordt/repos/gaia/app/keepers/keepers.go:521-522
+          cbStack := ibccallbacks.NewIBCMiddleware(transferStack, appKeepers.PFMRouterKeeper, 
+              wasmStackIBCHandler, gaiaparams.MaxIBCCallbackGas)
+        stack_position: "inner"
+        wraps: "transfer"
+        wrapped_by: "provider"
+        critical_setup: |
+          # MUST set ICS4Wrapper after stack creation:
+          appKeepers.TransferKeeper.WithICS4Wrapper(cbStack)
+      
+      ibc_hooks:
+        present: false
+        reason: "Using native callbacks in v10"
+
+  juno:
+    chain_info:
+      name: "Juno"
+      binary: "junod"
+      ibc_go_version: "v8"
+      cosmos_sdk_version: "v0.47.x"
+      analyzed_date: "2025-08-25"
+      source_files:
+        - "/Users/cordt/repos/juno/app/keepers/keepers.go"
+    
+    middlewares:
+      ibc_hooks:
+        present: true
+        version: "v8"
+        import: "github.com/cosmos/ibc-apps/modules/ibc-hooks/v8"
+        initialization: |
+          # File: /Users/cordt/repos/juno/app/keepers/keepers.go:384-399
+          hooksKeeper := ibchookskeeper.NewKeeper(
+              appKeepers.keys[ibchookstypes.StoreKey],
+          )
+          appKeepers.IBCHooksKeeper = &hooksKeeper
+          
+          wasmHooks := ibchooks.NewWasmHooks(
+              appKeepers.IBCHooksKeeper,
+              &appKeepers.WasmKeeper,
+              bech32Prefix,
+          )
+          appKeepers.Ics20WasmHooks = &wasmHooks
+          
+          appKeepers.HooksICS4Wrapper = ibchooks.NewICS4Middleware(
+              appKeepers.IBCKeeper.ChannelKeeper,
+              appKeepers.Ics20WasmHooks,
+          )
+        stack_position: "after transfer"
+        wraps: "transfer"
+        wrapped_by: "packet_forward"
+        
+      packet_forward_middleware:
+        present: true
+        version: "v8"
+        import: "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8/packetforward"
+        initialization: |
+          # File: /Users/cordt/repos/juno/app/keepers/keepers.go:415-424
+          appKeepers.PacketForwardKeeper = packetforwardkeeper.NewKeeper(
+              appCodec,
+              appKeepers.keys[packetforwardtypes.StoreKey],
+              appKeepers.TransferKeeper, // Zero-value, set later
+              appKeepers.IBCKeeper.ChannelKeeper,
+              appKeepers.BankKeeper,
+              appKeepers.IBCKeeper.ChannelKeeper,
+              authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+          )
+          # Line 440:
+          appKeepers.PacketForwardKeeper.SetTransferKeeper(appKeepers.TransferKeeper)
+        stack_position: "middle"
+        wraps: "ibc_hooks"
+        wrapped_by: "ibc_fee"
+        
+      async_icq:
+        present: true
+        version: "v8"
+        import: "github.com/cosmos/ibc-apps/modules/async-icq/v8"
+        initialization: |
+          # File: /Users/cordt/repos/juno/app/keepers/keepers.go:443-452
+          appKeepers.ICQKeeper = icqkeeper.NewKeeper(
+              appCodec,
+              appKeepers.keys[icqtypes.StoreKey],
+              appKeepers.IBCKeeper.ChannelKeeper,
+              appKeepers.IBCKeeper.ChannelKeeper,
+              appKeepers.IBCKeeper.PortKeeper,
+              scopedICQKeeper,
+              bApp.GRPCQueryRouter(),
+              govModAddress,
+          )
+        note: "Separate IBC module, not middleware"
+        
+      rate_limiting:
+        present: false
+
+  neutron:
+    chain_info:
+      name: "Neutron"
+      binary: "neutrond"
+      ibc_go_version: "v8"
+      cosmos_sdk_version: "v0.50.x"
+      analyzed_date: "2025-08-25"
+      source_files:
+        - "/Users/cordt/repos/neutron/app/app.go"
+    
+    middlewares:
+      ibc_hooks:
+        present: true
+        version: "custom (neutron fork)"
+        import: "github.com/neutron-org/neutron/v8/x/ibc-hooks"
+        initialization: |
+          # File: /Users/cordt/repos/neutron/app/app.go:1669-1674
+          wasmHooks := ibchooks.NewWasmHooks(nil, sdk.GetConfig().GetBech32AccountAddrPrefix())
+          app.Ics20WasmHooks = &wasmHooks
+          app.HooksICS4Wrapper = ibchooks.NewICS4Middleware(
+              app.IBCKeeper.ChannelKeeper,
+              app.IBCKeeper.ChannelKeeper,
+              &wasmHooks,
+          )
+        stack_position: "outermost"
+        wraps: "rate_limiting"
+        
+      packet_forward_middleware:
+        present: true
+        version: "v8"
+        import: "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8/packetforward"
+        initialization: |
+          # File: /Users/cordt/repos/neutron/app/app.go:1709-1718
+          var ibcStack ibcporttypes.IBCModule = packetforward.NewIBCMiddleware(
+              transferSudo.NewIBCModule(
+                  app.TransferKeeper,
+                  contractmanager.NewSudoLimitWrapper(app.ContractManagerKeeper, &app.WasmKeeper),
+              ),
+              app.PFMKeeper,
+              0,
+              pfmkeeper.DefaultForwardTransferPacketTimeoutTimestamp,
+          )
+        stack_position: "inner"
+        wraps: "transfer_sudo"
+        wrapped_by: "gmp_middleware"
+        
+      rate_limiting:
+        present: true
+        version: "custom (WASM-based)"
+        import: "github.com/neutron-org/neutron/v8/x/ibc-rate-limit"
+        initialization: |
+          # File: /Users/cordt/repos/neutron/app/app.go:1721-1722
+          rateLimitingTransferModule := ibcratelimit.NewIBCModule(ibcStack, app.RateLimitingICS4Wrapper)
+        stack_position: "middle"
+        wraps: "gmp_middleware"
+        wrapped_by: "ibc_hooks"
+        
+      gmp_middleware:
+        present: true
+        version: "custom"
+        initialization: |
+          # File: /Users/cordt/repos/neutron/app/app.go:1720
+          ibcStack = gmpmiddleware.NewIBCMiddleware(ibcStack)
+
+  osmosis:
+    chain_info:
+      name: "Osmosis"
+      binary: "osmosisd"
+      ibc_go_version: "v8"
+      cosmos_sdk_version: "v0.47.x"
+      analyzed_date: "2025-08-25"
+      source_files:
+        - "/Users/cordt/repos/osmosis/app/keepers/keepers.go"
+    
+    middlewares:
+      ibc_hooks:
+        present: true
+        version: "local (x/ibc-hooks)"
+        import: "github.com/osmosis-labs/osmosis/x/ibc-hooks"
+        initialization: |
+          # File: /Users/cordt/repos/osmosis/app/keepers/keepers.go:310-316
+          hooksKeeper := ibchookskeeper.NewKeeper(
+              appKeepers.keys[ibchookstypes.StoreKey],
+              appKeepers.GetSubspace(ibchookstypes.ModuleName),
+              appKeepers.IBCKeeper.ChannelKeeper,
+              nil,
+          )
+          appKeepers.IBCHooksKeeper = hooksKeeper
+        stack_position: "outermost"
+        wraps: "rate_limiting"
+        integration: |
+          # File: /Users/cordt/repos/osmosis/app/keepers/keepers.go:731
+          hooksTransferModule := ibchooks.NewIBCMiddleware(&rateLimitingTransferModule, &appKeepers.HooksICS4Wrapper)
+          appKeepers.TransferStack = &hooksTransferModule
+        
+      packet_forward_middleware:
+        present: true
+        version: "v8"
+        import: "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8/packetforward"
+        initialization: |
+          # File: /Users/cordt/repos/osmosis/app/keepers/keepers.go:710-719
+          appKeepers.PacketForwardKeeper = packetforwardkeeper.NewKeeper(
+              appCodec,
+              appKeepers.keys[packetforwardtypes.StoreKey],
+              appKeepers.TransferKeeper,
+              appKeepers.IBCKeeper.ChannelKeeper,
+              appKeepers.BankKeeper,
+              appKeepers.IBCKeeper.ChannelKeeper,
+              appKeepers.HooksICS4Wrapper,
+              authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+          )
+        stack_position: "inner"
+        wraps: "transfer"
+        wrapped_by: "rate_limiting"
+        
+      rate_limiting:
+        present: true
+        version: "WASM contract-based (v13 upgrade)"
+        import: "github.com/osmosis-labs/osmosis/v30/x/ibc-rate-limit"
+        initialization: |
+          # File: /Users/cordt/repos/osmosis/app/keepers/keepers.go:681-688
+          rateLimitingICS4Wrapper := ibcratelimit.NewICS4Middleware(
+              appKeepers.HooksICS4Wrapper,
+              appKeepers.AccountKeeper,
+              nil, // wasm keeper set later
+              appKeepers.BankKeeper,
+              appKeepers.GetSubspace(ibcratelimittypes.ModuleName),
+          )
+          appKeepers.RateLimitingICS4Wrapper = &rateLimitingICS4Wrapper
+        stack_position: "middle"
+        wraps: "packet_forward"
+        wrapped_by: "ibc_hooks"
+        note: "Uses WASM contract for rate limiting logic"
+        
+      async_icq:
+        present: true
+        version: "v8"
+        import: "github.com/cosmos/ibc-apps/modules/async-icq/v8"
+        note: "Separate IBC module, not middleware"
+
+  noble:
+    chain_info:
+      name: "Noble"
+      binary: "nobled"
+      ibc_go_version: "v8"
+      cosmos_sdk_version: "v0.50.x"
+      analyzed_date: "2025-08-25"
+      source_files:
+        - "/Users/cordt/repos/noble/legacy.go"
+        - "/Users/cordt/repos/noble/app.go"
+    
+    middlewares:
+      packet_forward_middleware:
+        present: true
+        version: "v8"
+        import: "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8/packetforward"
+        initialization: |
+          # File: /Users/cordt/repos/noble/legacy.go:121-127
+          transferStack = pfm.NewIBCMiddleware(
+              transferStack,
+              app.PFMKeeper,
+              0,
+              pfmkeeper.DefaultForwardTransferPacketTimeoutTimestamp,
+              pfmkeeper.DefaultRefundTransferPacketTimeoutTimestamp,
+          )
+        stack_position: "middle"
+        wraps: "forwarding"
+        wrapped_by: "blockibc"
+        
+      custom_forwarding:
+        present: true
+        version: "noble-specific"
+        initialization: |
+          # File: /Users/cordt/repos/noble/legacy.go:120
+          transferStack = forwarding.NewMiddleware(transferStack, app.AccountKeeper, app.ForwardingKeeper)
+        stack_position: "inner"
+        wraps: "transfer"
+        wrapped_by: "packet_forward"
+        
+      custom_blockibc:
+        present: true
+        version: "noble-specific"
+        initialization: |
+          # File: /Users/cordt/repos/noble/legacy.go:128
+          transferStack = blockibc.NewIBCMiddleware(transferStack, app.FTFKeeper)
+        stack_position: "outermost"
+        wraps: "packet_forward"
+        
+      rate_limiting:
+        present: false
+      ibc_hooks:
+        present: false
+      ibc_callbacks:
+        present: false
+
+patterns_observed:
+  stack_ordering:
+    - "Rate limiting typically outermost for security"
+    - "Packet forward middleware usually in middle"
+    - "Hooks/callbacks closest to transfer module"
+    - "Fee middleware (if present) after PFM"
+    
+  ics4_wrapper_configuration:
+    - "Critical for packet forwarding integration"
+    - "Transfer keeper uses PFM keeper as ICS4Wrapper"
+    - "Callbacks require WithICS4Wrapper call after stack creation"
+    
+  version_adoption:
+    - "v8 dominates production (4/5 chains)"
+    - "v10 emerging with Gaia using native callbacks"
+    - "Custom implementations common (Neutron, Osmosis rate limiting)"
+    
+  initialization_patterns:
+    - "PFM keeper initialized with nil transfer keeper to avoid circular dependency"
+    - "SetTransferKeeper called after transfer keeper creation"
+    - "WASM contract keeper set after WASM keeper initialization"
