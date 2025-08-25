@@ -2,7 +2,7 @@
 
 ## Overview
 
-This directory contains comprehensive documentation for IBC middleware integration based on systematic analysis of production blockchain implementations and expert review.
+This directory contains [the initial rough draft] of a set of documentation around integration of various IBC middlewares.
 
 ## Documentation Structure
 
