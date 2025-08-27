@@ -13,6 +13,14 @@ All code examples in this document have been cross-referenced with:
 
 This ensures every function signature, parameter order, and integration pattern matches working blockchain implementations.
 
+## SDK Prerequisites
+
+Understanding SDK types is essential for middleware integration:
+- **sdk.Context vs context.Context**: See [SDK Integration Guide](./sdk-integration-answers.md#sdkcontext-vs-contextcontext)
+- **sdk.AccAddress and sdk.Coin**: See [SDK Integration Guide](./sdk-integration-answers.md#sdkaccaddress)
+- **IBC Acknowledgements**: See [SDK Integration Guide](./sdk-integration-answers.md#ibc-acknowledgements)
+- **Testing with SimApp**: See [SDK Integration Guide](./sdk-integration-answers.md#creating-simapp-for-testing)
+
 ## Core middleware architecture fundamentals
 
 IBC middleware follows an **onion-layer architecture** where each middleware layer completely wraps the underlying application or middleware. The middleware pattern implements bidirectional communication through two key interfaces: `IBCModule` for Core IBC → Application communication, and `ICS4Wrapper` for Application → Core IBC communication.

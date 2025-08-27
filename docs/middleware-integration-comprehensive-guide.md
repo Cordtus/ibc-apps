@@ -452,6 +452,8 @@ app.IBCKeeper.PortKeeper
 
 ## References
 
+- **SDK Integration Guide**: See [sdk-integration-answers.md](./sdk-integration-answers.md) for detailed answers about SDK types, testing, and integration patterns
+
 - Production implementations analyzed:
   - Gaia: `/Users/cordt/repos/gaia/app/keepers/keepers.go`
   - Juno: `/Users/cordt/repos/juno/app/keepers/keepers.go`
@@ -467,3 +469,4 @@ app.IBCKeeper.PortKeeper
 - Module repositories:
   - [ibc-apps](https://github.com/cosmos/ibc-apps): Reference implementations
   - [ibc-go](https://github.com/cosmos/ibc-go): Core IBC and callbacks
+  - [cosmos-sdk](https://github.com/cosmos/cosmos-sdk): SDK types and testing utilities
