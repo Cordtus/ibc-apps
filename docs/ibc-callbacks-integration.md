@@ -47,7 +47,7 @@ Callbacks middleware operates as a layer in the IBC stack:
 - You have existing IBC Hooks integrations
 - You need the specific sender address transformation pattern
 
-**IMPORTANT**: Callbacks and IBC Hooks are mutually exclusive - you cannot use both in the same middleware stack.
+**IMPORTANT**: Callbacks and IBC Hooks are mutually exclusive in the transfer stack — do not combine them for the same base app.
 
 ## Prerequisites
 
@@ -72,16 +72,16 @@ require (
 In your `app/app.go`:
 ```go
 import (
-    // IBC Callbacks (included in ibc-go v10)
+    // IBC Callbacks
     ibccallbacks "github.com/cosmos/ibc-go/v10/modules/apps/callbacks"
     ibccallbackstypes "github.com/cosmos/ibc-go/v10/modules/apps/callbacks/types"
-    
-    // If using with packet forward middleware
+
+    // Packet Forward Middleware (optional)
     packetforward "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v10/packetforward"
     packetforwardkeeper "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v10/packetforward/keeper"
     packetforwardtypes "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v10/packetforward/types"
-    
-    // For CosmWasm integration (if needed)
+
+    // CosmWasm (optional)
     wasm "github.com/CosmWasm/wasmd/x/wasm"
     wasmkeeper "github.com/CosmWasm/wasmd/x/wasm/keeper"
 )
@@ -126,53 +126,44 @@ wasmHandler := wasm.NewIBCHandler(
 
 ### Step 3: Configure Middleware Stack with Callbacks
 
-This is the critical integration step. The order matters significantly:
+Callbacks wiring differs across ibc-go minor versions. Use the pattern that matches your ibc-go.
+
+Option A — ibc-go v10.1.x (constructor with setters)
 
 ```go
-// Configure the transfer stack with callbacks and packet forward middleware
-// Based on ibc-go v10 integration logic
+maxCallbackGas := uint64(10_000_000)
+wasmHandler := wasm.NewIBCHandler(app.WasmKeeper, app.IBCKeeper.ChannelKeeper, app.IBCKeeper.ChannelKeeper)
 
-// Set maximum gas for callback execution
-maxCallbackGas := uint64(10_000_000) // 10M gas
+// 1) Construct callbacks middleware
+cb := ibccallbacks.NewIBCMiddleware(wasmHandler, maxCallbackGas)
 
-// Create the base transfer module
-var transferStack porttypes.IBCModule
-transferStack = transfer.NewIBCModule(app.TransferKeeper)
+// 2) Set underlying application and ICS4 wrapper
+cb.SetUnderlyingApplication(transfer.NewIBCModule(app.TransferKeeper))
+cb.SetICS4Wrapper(app.PacketForwardKeeper) // or ChannelKeeper if PFM is not used
 
-// CRITICAL: Callbacks wraps transfer as base app, 
-// and uses PacketForwardKeeper as ICS4Wrapper
-cbStack := ibccallbacks.NewIBCMiddleware(
-    transferStack,                // Base application
-    app.PacketForwardKeeper,       // ICS4Wrapper (for packet forwarding)
-    wasmHandler,                   // ContractKeeper
-    maxCallbackGas,                // Gas limit
-)
-
-// Packet forward middleware wraps callbacks
-// This order ensures callbacks work with forwarded packets
+// 3) Build stack (bottom→top): transfer -> callbacks -> PFM -> (rate-limit)
+var transferStack porttypes.IBCModule = cb
 transferStack = packetforward.NewIBCMiddleware(
-    cbStack,                       // Callbacks stack as base
+    transferStack,
     app.PacketForwardKeeper,
-    0,                            // Retries on timeout
+    0,
     packetforwardkeeper.DefaultForwardTransferPacketTimeoutTimestamp,
 )
 
-// Optional: Add rate limiting as outermost layer
-if app.RateLimitingEnabled {
-    transferStack = ratelimit.NewIBCMiddleware(
-        app.RatelimitKeeper,
-        transferStack,
-    )
-}
+// 4) Ensure TransferKeeper uses callbacks as ICS4Wrapper
+app.TransferKeeper.WithICS4Wrapper(cb)
 
-// CRITICAL: Update ICS4Wrapper reference
-// This connects callbacks to packet forwarding
-app.TransferKeeper.WithICS4Wrapper(cbStack)
-
-// Register with IBC router
+// 5) Route
 ibcRouter := porttypes.NewRouter()
 ibcRouter.AddRoute(ibctransfertypes.ModuleName, transferStack)
 app.IBCKeeper.SetRouter(ibcRouter)
+```
+
+Option B — ibc-go v10.3.x and IBC v2 (constructor takes app/wrappers)
+
+```go
+// See ibc-go modules/apps/callbacks/v2/ibc_middleware.go for the v2 constructor.
+// Gaia uses this pattern in v10.3.x.
 ```
 
 ### Step 4: Alternative Stack Without Packet Forward
@@ -185,49 +176,42 @@ maxCallbackGas := uint64(10_000_000)
 var transferStack porttypes.IBCModule
 transferStack = transfer.NewIBCModule(app.TransferKeeper)
 
-// Callbacks directly wraps transfer
-cbStack := ibccallbacks.NewIBCMiddleware(
-    transferStack,
-    app.IBCKeeper.ChannelKeeper,  // Use channel keeper as ICS4Wrapper
-    wasmHandler,
-    maxCallbackGas,
-)
-
-// Update ICS4Wrapper
-app.TransferKeeper.WithICS4Wrapper(cbStack)
-
-// Register with router
-ibcRouter.AddRoute(ibctransfertypes.ModuleName, cbStack)
+cb := ibccallbacks.NewIBCMiddleware(wasmHandler, maxCallbackGas)
+cb.SetUnderlyingApplication(transfer.NewIBCModule(app.TransferKeeper))
+cb.SetICS4Wrapper(app.IBCKeeper.ChannelKeeper)
+app.TransferKeeper.WithICS4Wrapper(cb)
+ibcRouter.AddRoute(ibctransfertypes.ModuleName, cb)
 ```
 
 ## Configuration
 
 ### Callback Registration Format
 
-Callbacks are registered via packet metadata (similar to memo field):
+Callbacks are registered via ICS‑20 memo JSON using keys defined in ibc-go.
+
+Source (send‑side) callback:
 
 ```json
 {
-    "callbacks": {
-        "src_callback": {
-            "contract": "cosmos1contractaddress",
-            "gas_limit": 500000
-        },
-        "dest_callback": {
-            "contract": "cosmos1destcontract",
-            "gas_limit": 600000
-        },
-        "ack_callback": {
-            "contract": "cosmos1contractaddress",
-            "gas_limit": 300000
-        },
-        "timeout_callback": {
-            "contract": "cosmos1contractaddress",
-            "gas_limit": 300000
-        }
-    }
+  "src_callback": {
+    "address": "cosmos1contractaddress",
+    "gas_limit": "500000"
+  }
 }
 ```
+
+Destination (recv‑side) callback:
+
+```json
+{
+  "dest_callback": {
+    "address": "cosmos1contractaddress",
+    "gas_limit": "600000"
+  }
+}
+```
+
+See: `../ibc-go/modules/apps/callbacks/types/keys.go` and `../ibc-go/modules/apps/callbacks/types/callbacks_test.go`.
 
 ### Callback Types
 
@@ -250,13 +234,10 @@ const (
     MinCallbackGas = uint64(100_000)
 )
 
-// Configure in middleware initialization
-cbStack := ibccallbacks.NewIBCMiddleware(
-    transferStack,
-    ics4Wrapper,
-    contractKeeper,
-    MaxCallbackGas,  // Maximum gas limit
-)
+// Configure in middleware initialization (v10.1.x pattern)
+cb := ibccallbacks.NewIBCMiddleware(contractKeeper, MaxCallbackGas)
+cb.SetUnderlyingApplication(transfer.NewIBCModule(app.TransferKeeper))
+cb.SetICS4Wrapper(ics4Wrapper)
 ```
 
 ## Contract Integration
@@ -354,15 +335,9 @@ pub fn execute_transfer_with_callbacks(
 ) -> Result<Response, ContractError> {
     // Prepare callback metadata
     let callbacks = json!({
-        "callbacks": {
-            "ack_callback": {
-                "contract": env.contract.address.to_string(),
-                "gas_limit": 500000
-            },
-            "timeout_callback": {
-                "contract": env.contract.address.to_string(),
-                "gas_limit": 300000
-            }
+        "src_callback": {
+            "address": env.contract.address.to_string(),
+            "gas_limit": "500000"
         }
     });
     
@@ -404,15 +379,8 @@ func (h ModuleCallbackHandler) ExecuteContract(
         return nil, err
     }
     
-    // Handle callback based on type
-    switch callbackMsg.Type {
-    case "ack_callback":
-        return h.handleAckCallback(ctx, callbackMsg)
-    case "timeout_callback":
-        return h.handleTimeoutCallback(ctx, callbackMsg)
-    default:
-        return nil, fmt.Errorf("unknown callback type: %s", callbackMsg.Type)
-    }
+    // Handle callback according to your app's contract schema
+    // ibc-go callbacks invoke ContractKeeper methods; the payload shape is app-defined
 }
 ```
 
@@ -427,14 +395,7 @@ func TestCallbacksMiddleware(t *testing.T) {
     ctx := app.BaseApp.NewContext(false, tmproto.Header{})
     
     // Create transfer with callbacks
-    memo := `{
-        "callbacks": {
-            "ack_callback": {
-                "contract": "cosmos1testcontract",
-                "gas_limit": 500000
-            }
-        }
-    }`
+    memo := `{"src_callback":{"address":"cosmos1testcontract","gas_limit":"500000"}}`
     
     transferMsg := transfertypes.NewMsgTransfer(
         "transfer",
@@ -479,16 +440,9 @@ func TestCallbacksMiddleware(t *testing.T) {
 
 ### Integration Tests
 
-```bash
-# Run integration tests with callbacks
-cd modules/apps/callbacks
-go test -v ./...
-
-# Test with specific scenarios
-go test -v -run TestCallbackExecution
-go test -v -run TestGasLimits
-go test -v -run TestCallbackFailures
-```
+Working test scenarios live in ibc-go:
+- `../ibc-go/modules/apps/callbacks/ibc_middleware_test.go`
+- `../ibc-go/modules/apps/callbacks/types/callbacks_test.go`
 
 ### Manual Testing
 
@@ -499,11 +453,11 @@ wasmd tx wasm store callback_contract.wasm --from validator
 # Instantiate
 wasmd tx wasm instantiate 1 '{}' --from validator --label "callback-test"
 
-# Send transfer with callbacks
+# Send transfer with callbacks (source callback)
 wasmd tx ibc-transfer transfer transfer channel-0 \
     cosmos1recipient 1000uatom \
     --from validator \
-    --memo '{"callbacks":{"ack_callback":{"contract":"cosmos1contract","gas_limit":500000}}}'
+    --memo '{"src_callback":{"address":"cosmos1contract","gas_limit":"500000"}}'
 
 # Query contract state to verify callback execution
 wasmd query wasm contract-state smart cosmos1contract '{"get_callback_count":{}}'
@@ -582,7 +536,7 @@ groups:
 **Diagnosis**: Check callback registration format
 ```bash
 # Verify memo format
-echo '{"callbacks":{"ack_callback":{"contract":"cosmos1...","gas_limit":500000}}}' | jq .
+echo '{"src_callback":{"address":"cosmos1...","gas_limit":"500000"}}' | jq .
 
 # Check if contract exists and has sudo endpoint
 wasmd query wasm contract cosmos1contract
@@ -592,14 +546,7 @@ wasmd query wasm contract cosmos1contract
 **Solution**: Increase gas limit or optimize callback code
 ```go
 // Increase gas limit in memo
-{
-    "callbacks": {
-        "ack_callback": {
-            "contract": "cosmos1contract",
-            "gas_limit": 1000000  // Increased from 500000
-        }
-    }
-}
+{"src_callback":{"address":"cosmos1contract","gas_limit":"1000000"}}
 ```
 
 #### Issue: Callback fails silently
@@ -673,7 +620,7 @@ filter = "callbacks:debug,x/ibc:debug,*:info"
 - {"wasm": {"contract": "...", "msg": {...}}}
 
 // New callback format
-+ {"callbacks": {"ack_callback": {"contract": "...", "gas_limit": 500000}}}
++ {"src_callback": {"address": "...", "gas_limit": "500000"}}
 ```
 
 4. **Update Contract Handlers**:
@@ -688,23 +635,9 @@ pub enum CallbackMsg {
 
 ## API Reference
 
-### Middleware Methods
-
-```go
-// NewIBCMiddleware creates a new IBCMiddleware with callbacks support
-func NewIBCMiddleware(
-    app porttypes.PacketDataUnmarshaler,  // Base application
-    ics4Wrapper porttypes.ICS4Wrapper,     // ICS4 wrapper (channel keeper or PFM)
-    contractKeeper types.ContractKeeper,   // Contract executor
-    maxCallbackGas uint64,                 // Maximum gas for callbacks
-) *IBCMiddleware
-
-// Packet lifecycle methods with callback support
-func (im *IBCMiddleware) SendPacket(...)
-func (im *IBCMiddleware) OnRecvPacket(...)
-func (im *IBCMiddleware) OnAcknowledgementPacket(...)
-func (im *IBCMiddleware) OnTimeoutPacket(...)
-```
+See ibc-go source for exact signatures and version variants:
+- v10.1.x: `modules/apps/callbacks/ibc_middleware.go`
+- v10.3.x (IBCv2): `modules/apps/callbacks/v2/ibc_middleware.go`
 
 ### Contract Keeper Interface
 
@@ -731,21 +664,23 @@ type ContractKeeper interface {
 ### Events
 
 ```go
-// Event types
+// Event types (see ibc-go callbacks types/events.go)
 const (
-    EventTypeSourceCallback = "source_callback"
-    EventTypeDestCallback = "dest_callback"
-    EventTypeAckCallback = "ack_callback"
-    EventTypeTimeoutCallback = "timeout_callback"
-    EventTypeCallbackError = "callback_error"
-    
-    // Attributes
-    AttributeKeyCallbackType = "callback_type"
-    AttributeKeyCallbackAddress = "callback_address"
-    AttributeKeyCallbackGasLimit = "callback_gas_limit"
-    AttributeKeyCallbackGasUsed = "callback_gas_used"
-    AttributeKeyCallbackError = "callback_error"
-    AttributeKeyCallbackSuccess = "callback_success"
+    EventTypeSourceCallback      = "ibc_src_callback"
+    EventTypeDestinationCallback = "ibc_dest_callback"
+
+    AttributeKeyCallbackType                    = "callback_type"   // acknowledgement | timeout | recv_packet
+    AttributeKeyCallbackAddress                 = "callback_address"
+    AttributeKeyCallbackResult                  = "callback_result" // success | failure
+    AttributeKeyCallbackError                   = "callback_error"
+    AttributeKeyCallbackGasLimit                = "callback_exec_gas_limit"
+    AttributeKeyCallbackCommitGasLimit          = "callback_commit_gas_limit"
+    AttributeKeyCallbackSourcePortID            = "packet_src_port"
+    AttributeKeyCallbackSourceChannelID         = "packet_src_channel"
+    AttributeKeyCallbackDestPortID              = "packet_dest_port"
+    AttributeKeyCallbackDestChannelID           = "packet_dest_channel"
+    AttributeKeyCallbackSequence                = "packet_sequence"
+    AttributeKeyCallbackBaseApplicationVersion  = "callback_base_application_version"
 )
 ```
 
@@ -765,22 +700,6 @@ transferStack = transferSudo.NewIBCModule(
     contractmanager.NewSudoLimitWrapper(app.ContractManagerKeeper, &app.WasmKeeper),
 )
 
-// Packet forward middleware wrapping transfer
-transferStack = packetforward.NewIBCMiddleware(
-    transferStack,
-    app.PFMKeeper,
-    0,
-    pfmkeeper.DefaultForwardTransferPacketTimeoutTimestamp,
-)
-
-// GMP middleware
-transferStack = gmpmiddleware.NewIBCMiddleware(transferStack)
-
-// Rate limiting
-rateLimitingTransferModule := ibcratelimit.NewIBCModule(transferStack, app.RateLimitingICS4Wrapper)
-
-// IBC hooks as outermost layer (Neutron still uses hooks, not callbacks)
-hooksTransferModule := ibchooks.NewIBCMiddleware(&rateLimitingTransferModule, &app.HooksICS4Wrapper)
 ```
 
 ## Additional Resources
@@ -788,7 +707,7 @@ hooksTransferModule := ibchooks.NewIBCMiddleware(&rateLimitingTransferModule, &a
 - [IBC-go v10 Callbacks Documentation](https://ibc.cosmos.network/v10/ibc/apps/callbacks)
 - [ADR-008: Callback to IBC Actors](https://github.com/cosmos/ibc-go/blob/main/docs/architecture/adr-008-app-caller-cbs.md)
 - [IBC-go Repository](https://github.com/cosmos/ibc-go/tree/main/modules/apps/callbacks)
-- [Migration Guide from v8 to v10](https://ibc.cosmos.network/v10/migrations/v9-to-v10)
+- [Migration Guide from v9 to v10](https://ibc.cosmos.network/v10/migrations/v9-to-v10)
 
 ## Version Compatibility Matrix
 

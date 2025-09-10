@@ -269,12 +269,10 @@ All three experts agree on these critical needs:
 ## References
 
 - Expert Analysis Documents:
-  - v7: `/Users/cordt/repos/ibc-apps/docs/v7-expert-questions.md`
-  - v8: `/Users/cordt/repos/ibc-apps/docs/v8-expert-questions.md`
-  - v10: `/Users/cordt/repos/ibc-apps/docs/v10-expert-questions.md`
+  - See: `./middleware-integration-comprehensive-guide.md` and `./wiring-reference.md`
 
 - Production Chain Analysis:
-  - `/Users/cordt/repos/ibc-apps/docs/production-chain-analysis.yaml`
+  - `./production-chain-analysis.yaml`
 
 - Comprehensive Guide:
-  - `/Users/cordt/repos/ibc-apps/docs/middleware-integration-comprehensive-guide.md`
+  - `./middleware-integration-comprehensive-guide.md`

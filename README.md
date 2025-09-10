@@ -4,14 +4,14 @@
 
 IBC applications and middleware for Cosmos SDK blockchains
 
-🌌 Why have an ibc-apps repo?
+ Why have an ibc-apps repo?
 ================================
 
 Early IBC work started in the [ibc-go](https://github.com/cosmos/ibc-go) repo. As the repo grew, the need arose to parallelize the work among many teams.
 
 The ibc-apps repo is meant to be an easily discoverable, navigable, central place for modules and middleware.
 
-🌌🌌 Who's it for?
+ Who's it for?
 ===================
 
 IBC-Apps is for:
@@ -22,7 +22,7 @@ IBC-Apps is for:
 - _Everyone who uses IBC_ and wants to benefit from the full range of its capabilities.
 
 
-🌌🌌🌌 What is it?
+ What is it?
 ==================
 
 ### What is IBC?
@@ -43,12 +43,12 @@ IBC Modules are self-contained applications that enable packets to be sent to an
 IBC Middleware are self-contained modules that sit between core IBC and an underlying IBC application.  This allows developers to customize lower-level packet handling.  Multiple middleware modules can be chained together.
 
 
-🌌🌌🌌🌌 How to Use this repo
+ How to Use this repo
 =============================
 
 If you'd like to include software in this repo, please see [contributing](CONTRIBUTING.md).
 
-🌌🌌🌌🌌🌌 Bonus Content
+ Bonus Content
 =============================
 
 ## Maintained Branches

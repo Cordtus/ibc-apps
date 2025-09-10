@@ -32,7 +32,7 @@ This directory contains [the initial rough draft] of a set of documentation arou
    - Contract integration logic
    - Production examples
 
-5. **[Packet Forward Middleware Documentation](./packet-forward-middleware/docs/integration.md)**
+5. **[Packet Forward Middleware Documentation](../middleware/packet-forward-middleware/docs/integration.md)**
    - Multi-hop transfer configuration
    - Timeout and retry settings
    - Integration examples
@@ -59,14 +59,8 @@ This directory contains [the initial rough draft] of a set of documentation arou
 ### Expert Analysis
 
 9. **[Consolidated Questions and Uncertainties](./consolidated-expert-questions-and-uncertainties.md)**
-   - 27 critical implementation questions
-   - Uncertainties requiring investigation
+   - Critical implementation questions and open items
    - Recommendations for improvement
-
-10. **Expert Reviews**
-    - [v7 Expert Questions](./v7-expert-questions.md)
-    - [v8 Expert Questions](./v8-expert-questions.md)
-    - [v10 Expert Questions](./v10-expert-questions.md)
 
 ### Planning Documents
 

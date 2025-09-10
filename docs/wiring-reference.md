@@ -1,17 +1,6 @@
 # IBC Middleware Wiring Technical Guidelines
 
-Comprehensive technical documentation for integrating IBC middleware in ibc-go versions 7, 8, and 10, covering interface logic, middleware composition, real-world examples, and safety considerations for Cosmos chain developers. **All code examples verified against production implementations as of August 2025.**
-
-## Code Accuracy Verification
-//**remove this part, this is only for your context/reference**//
-All code examples in this document have been cross-referenced with:
-- **ibc-go repository**: Latest interface definitions and implementation logic from cosmos/ibc-go
-- **Packet Forward Middleware**: Current implementations from cosmos/ibc-apps and strangelove-ventures repositories  
-- **Osmosis production code**: Rate limiting and hooks middleware from osmosis-labs/osmosis
-- **Stride implementation**: Rate limiting logic from Stride-Labs/ibc-rate-limiting
-- **Migration guides**: Official ibc-go v8 to v10 migration documentation
-
-This ensures every function signature, parameter order, and integration pattern matches working blockchain implementations.
+Comprehensive technical documentation for integrating IBC middleware in ibc-go versions 7, 8, and 10, covering interface logic, middleware composition, real-world examples, and safety considerations for Cosmos chain developers.
 
 ## SDK Prerequisites
 
@@ -52,13 +41,12 @@ type IBCModule interface {
 }
 ```
 
-**The ICS4Wrapper interface** enables middleware to interact with core IBC for sending packets:
+**The ICS4Wrapper interface** enables middleware to interact with core IBC for sending packets (v10 signatures):
 
 ```go
 type ICS4Wrapper interface {
     SendPacket(
         ctx sdk.Context,
-        chanCap *capabilitytypes.Capability,
         sourcePort string,
         sourceChannel string,
         timeoutHeight clienttypes.Height,
@@ -68,7 +56,6 @@ type ICS4Wrapper interface {
     
     WriteAcknowledgement(
         ctx sdk.Context,
-        chanCap *capabilitytypes.Capability,
         packet exported.PacketI,
         ack exported.Acknowledgement,
     ) error
@@ -124,16 +111,13 @@ var transferStack porttypes.IBCModule
 transferStack = transfer.NewIBCModule(app.TransferKeeper)
 
 // 2. Callbacks Middleware (integrated into ibc-go v10 core)
-cbStack := ibccallbacks.NewIBCMiddleware(
-    transferStack, 
-    app.PacketForwardKeeper, 
-    wasmStackIBCHandler, 
-    maxCallbackGas,
-)
+cb := ibccallbacks.NewIBCMiddleware(wasmStackIBCHandler, maxCallbackGas)
+cb.SetUnderlyingApplication(transfer.NewIBCModule(app.TransferKeeper))
+cb.SetICS4Wrapper(app.PacketForwardKeeper)
 
 // 3. Packet Forward Middleware (for multi-hop routing)
 transferStack = packetforward.NewIBCMiddleware(
-    cbStack, 
+    cb, 
     app.PacketForwardKeeper, 
     0, 
     packetforwardkeeper.DefaultForwardTransferPacketTimeoutTimestamp,
@@ -145,7 +129,7 @@ if app.RateLimitingEnabled {
 }
 
 // 5. Update ICS4Wrapper reference (CRITICAL - connects callbacks to packet forwarding)
-app.TransferKeeper.WithICS4Wrapper(cbStack)
+app.TransferKeeper.WithICS4Wrapper(cb)
 
 // 6. Register with IBC router
 ibcRouter.AddRoute(ibctransfertypes.ModuleName, transferStack)
@@ -215,12 +199,9 @@ transferStack = ibchooks.NewIBCMiddleware(transferStack, &app.HooksICS4Wrapper)
 maxCallbackGas := uint64(10_000_000)
 wasmStackIBCHandler := wasm.NewIBCHandler(app.WasmKeeper, app.IBCKeeper.ChannelKeeper, app.IBCKeeper.ChannelKeeper)
 
-cbStack := ibccallbacks.NewIBCMiddleware(
-    transferStack,               // underlying app
-    app.PacketForwardKeeper,     // ICS4Wrapper (used for packet forwarding integration)  
-    wasmStackIBCHandler,         // ContractKeeper
-    maxCallbackGas               // Gas limit (typically 10M)
-)
+cb := ibccallbacks.NewIBCMiddleware(wasmStackIBCHandler, maxCallbackGas)
+cb.SetUnderlyingApplication(transfer.NewIBCModule(app.TransferKeeper))
+cb.SetICS4Wrapper(app.PacketForwardKeeper)
 ```
 
 **Interface requirements**:
@@ -262,13 +243,10 @@ transferStack = ratelimit.NewIBCMiddleware(app.RatelimitKeeper, transferStack)
 **Choose one path (v10 logic)**:
 ```go
 // Path A: Callbacks middleware (integrated into ibc-go v10 core)
-cbStack := ibccallbacks.NewIBCMiddleware(
-    transferStack, 
-    app.PacketForwardKeeper, 
-    wasmHandler, 
-    maxCallbackGas,
-)
-transferStack = packetforward.NewIBCMiddleware(cbStack, app.PacketForwardKeeper, 0, timeout)
+cb := ibccallbacks.NewIBCMiddleware(wasmHandler, maxCallbackGas)
+cb.SetUnderlyingApplication(transfer.NewIBCModule(app.TransferKeeper))
+cb.SetICS4Wrapper(app.PacketForwardKeeper)
+transferStack = packetforward.NewIBCMiddleware(cb, app.PacketForwardKeeper, 0, timeout)
 
 // Path B: IBC Hooks middleware (external, mutually exclusive with callbacks)  
 app.HooksICS4Wrapper = ibchooks.NewICS4Middleware(app.IBCKeeper.ChannelKeeper, app.Ics20WasmHooks)
@@ -293,12 +271,9 @@ transferStack = transfer.NewIBCModule(app.TransferKeeper)
 
 // Callbacks wraps the transfer stack as its base app, and uses PacketForwardKeeper as the ICS4Wrapper
 // packet-forward-middleware is higher on the stack and sits between callbacks and the ibc channel keeper
-cbStack := ibccallbacks.NewIBCMiddleware(
-    transferStack, 
-    app.PacketForwardKeeper, 
-    wasmStackIBCHandler, 
-    maxCallbackGas,
-)
+cb := ibccallbacks.NewIBCMiddleware(wasmStackIBCHandler, maxCallbackGas)
+cb.SetUnderlyingApplication(transfer.NewIBCModule(app.TransferKeeper))
+cb.SetICS4Wrapper(app.PacketForwardKeeper)
 
 transferStack = packetforward.NewIBCMiddleware(
     cbStack,
@@ -308,7 +283,7 @@ transferStack = packetforward.NewIBCMiddleware(
 )
 
 // Update ICS4Wrapper reference - critical step
-app.TransferKeeper.WithICS4Wrapper(cbStack)
+app.TransferKeeper.WithICS4Wrapper(cb)
 
 // Register with IBC router
 ibcRouter.AddRoute(ibctransfertypes.ModuleName, transferStack)
@@ -363,16 +338,7 @@ transferStack = ibcfee.NewIBCMiddleware(transferStack, app.IBCFeeKeeper)
 // Use external implementations if needed
 ```
 
-**Callbacks middleware integration**: Callbacks middleware now included in core ibc-go module starting in v10:
-```go
-// v10+ native callbacks support
-cbStack := ibccallbacks.NewIBCMiddleware(
-    transferStack, 
-    app.PacketForwardKeeper, 
-    wasmStackIBCHandler, 
-    maxCallbackGas,
-)
-```
+**Callbacks middleware integration**: Callbacks middleware included in ibc-go v10. Use setter pattern (see earlier): construct with contract keeper + gas, then SetUnderlyingApplication(transfer.NewIBCModule(...)) and SetICS4Wrapper(...).
 
 **Capability module removal**: Capability module removed starting in v10:
 ```go
@@ -443,8 +409,8 @@ app.PacketForwardKeeper.SetTransferKeeper(app.TransferKeeper)
 
 **Missing ICS4Wrapper updates**:
 ```go
-// Required: Update ICS4Wrapper for middleware that wraps IBC
-app.TransferKeeper.WithICS4Wrapper(middlewareStack.(porttypes.ICS4Wrapper))
+// Required: For v10 callbacks, set callbacks as the ICS4 wrapper
+app.TransferKeeper.WithICS4Wrapper(cb)
 ```
 ## Module registration and initialization
 
@@ -478,6 +444,7 @@ app.RatelimitKeeper = ratelimitkeeper.NewKeeper(
     authtypes.NewModuleAddress(govtypes.ModuleName).String(),
     app.BankKeeper,
     app.IBCKeeper.ChannelKeeper,
+    app.IBCKeeper.ClientKeeper,
     app.IBCKeeper.ChannelKeeper, // ICS4Wrapper
 )
 
@@ -528,17 +495,13 @@ app.IBCKeeper.SetRouter(ibcRouter)
 ### Module manager registration
 
 ```go
-// Register only stateful middleware in module manager
+// Register stateful middleware in module manager
 app.moduleManager = module.NewManager(
-    // Core modules
     transfer.NewAppModule(app.TransferKeeper),
-    
-    // Stateful middleware modules only
-    ibcfee.NewAppModule(app.IBCFeeKeeper),
     packetforward.NewAppModule(app.PacketForwardKeeper),
     ratelimit.NewAppModule(app.RateLimitKeeper),
-    // Don't register stateless middleware
 )
+// Note: ICS-29 fee middleware is removed in ibc-go v10.
 ```
 
 **Primary sources**:

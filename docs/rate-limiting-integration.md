@@ -103,6 +103,7 @@ app.RateLimitKeeper = ratelimitkeeper.NewKeeper(
     authtypes.NewModuleAddress(govtypes.ModuleName).String(), // authority
     app.BankKeeper,
     app.IBCKeeper.ChannelKeeper,
+    app.IBCKeeper.ClientKeeper,
     app.IBCKeeper.ChannelKeeper, // ICS4Wrapper
 )
 ```
@@ -209,14 +210,18 @@ type Quota struct {
 }
 ```
 
-### Blacklist/Whitelist Configuration
+### Blacklist / Whitelist Configuration
 
 ```go
-// Blacklist specific denoms
-app.RateLimitKeeper.BlacklistDenom(ctx, "malicious-token")
+// Denom blacklist (keeper API only)
+app.RateLimitKeeper.AddDenomToBlacklist(ctx, "malicious-token")
+app.RateLimitKeeper.RemoveDenomFromBlacklist(ctx, "malicious-token")
+blacklisted := app.RateLimitKeeper.GetAllBlacklistedDenoms(ctx)
 
-// Whitelist trusted channels
-app.RateLimitKeeper.WhitelistChannel(ctx, "channel-0")
+// Address whitelist (sender/receiver address pairs)
+app.RateLimitKeeper.SetWhitelistedAddressPair(ctx, types.WhitelistedAddressPair{Sender: s, Receiver: r})
+app.RateLimitKeeper.RemoveWhitelistedAddressPair(ctx, s, r)
+pairs := app.RateLimitKeeper.GetAllWhitelistedAddressPairs(ctx)
 ```
 
 ## Testing
@@ -263,37 +268,18 @@ func TestRateLimitMiddleware(t *testing.T) {
 
 ### Integration Tests
 
+Run unit tests:
+
 ```bash
-# Run integration tests
 cd modules/rate-limiting
-make test-unit
-
-# Run e2e tests with Docker
-make local-image
-make ictest-ratelimit
+go test ./...
 ```
 
-### Manual Testing Commands
+### Governance and Queries
 
-```bash
-# Query all rate limits
-simd query ratelimit list-rate-limits
-
-# Query specific rate limit
-simd query ratelimit rate-limit channel-0 uatom
-
-# Query current flow
-simd query ratelimit flow channel-0 uatom
-
-# Add rate limit via governance
-simd tx gov submit-proposal add-rate-limit proposal.json --from validator
-
-# Update rate limit
-simd tx gov submit-proposal update-rate-limit update.json --from validator
-
-# Remove rate limit
-simd tx gov submit-proposal remove-rate-limit remove.json --from validator
-```
+See proto definitions for available messages and queries:
+- `modules/rate-limiting/proto/ratelimit/v1/tx.proto` (MsgAdd/Update/Remove/ResetRateLimit)
+- `modules/rate-limiting/proto/ratelimit/v1/query.proto` (rate limits, flows, blacklist, whitelist)
 
 ## Production Deployment
 

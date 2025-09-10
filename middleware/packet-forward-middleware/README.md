@@ -53,10 +53,10 @@ sequenceDiagram
     Chain B ->> Chain C: forward
     Chain C --> Chain C: recv_packet
     Chain C ->> Chain D: forward
-    Chain D --> Chain D: ☠️ recv_packet ERR ☠️
-    Chain D ->> Chain C: ☠️ ack ERR ☠️
-    Chain C ->> Chain B: ☠️ ack ERR ☠️
-    Chain B ->> Chain A: ☠️ ack ERR ☠️
+    Chain D --> Chain D:  recv_packet ERR 
+    Chain D ->> Chain C:  ack ERR 
+    Chain C ->> Chain B:  ack ERR 
+    Chain B ->> Chain A:  ack ERR 
 ```
 
 ### SCENARIO: Forward A->B->C with 1 retry, max timeouts occurs, refund back to A
@@ -70,7 +70,7 @@ sequenceDiagram
     Chain C --x Chain B: timeout
     Chain B ->> Chain C: forward retry
     Chain C --x Chain B: timeout
-    Chain B ->> Chain A: ☠️ ack ERR ☠️
+    Chain B ->> Chain A:  ack ERR 
 ```
 
 ## Examples

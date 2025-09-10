@@ -39,44 +39,28 @@ Packet Flow:
 
 ### Pattern 1: Gaia (IBC-go v10 with Callbacks)
 
-**Source**: `/Users/cordt/repos/gaia/app/keepers/keepers.go:508-531`
+Reference: `../gaia/app/keepers/keepers.go`
 
 ```go
-// Stack order (bottom to top):
-// Transfer -> Callbacks -> Provider -> PFM -> RateLimit -> IBC Core
+// Bottom → top: Transfer -> Callbacks -> Provider -> PFM -> RateLimit
+maxCallbackGas := gaiaparams.MaxIBCCallbackGas
+wasmStackIBCHandler := wasm.NewIBCHandler(appKeepers.WasmKeeper, appKeepers.IBCKeeper.ChannelKeeper, appKeepers.IBCKeeper.ChannelKeeper)
 
-var transferStack porttypes.IBCModule
-transferStack = transfer.NewIBCModule(appKeepers.TransferKeeper)
+// Callbacks middleware (constructor shape varies by ibc-go minor version)
+cb := ibccallbacks.NewIBCMiddleware(wasmStackIBCHandler, maxCallbackGas)
+cb.SetUnderlyingApplication(transfer.NewIBCModule(appKeepers.TransferKeeper))
+cb.SetICS4Wrapper(appKeepers.PFMRouterKeeper)
 
-// Callbacks wraps transfer
-cbStack := ibccallbacks.NewIBCMiddleware(
-    transferStack, 
-    appKeepers.PFMRouterKeeper,  // ICS4Wrapper for PFM
-    wasmStackIBCHandler,
-    gaiaparams.MaxIBCCallbackGas,
-)
-
-// Provider-specific middleware
-transferStack = icsprovider.NewIBCMiddleware(cbStack, appKeepers.ProviderKeeper)
-
-// Packet forward middleware
-transferStack = pfmrouter.NewIBCMiddleware(
-    transferStack,
-    appKeepers.PFMRouterKeeper,
-    0, // retries on timeout
-    pfmrouterkeeper.DefaultForwardTransferPacketTimeoutTimestamp,
-)
-
-// Rate limiting as outermost layer
+transferStack := porttypes.IBCModule(cb)
+transferStack = icsprovider.NewIBCMiddleware(transferStack, appKeepers.ProviderKeeper)
+transferStack = pfmrouter.NewIBCMiddleware(transferStack, appKeepers.PFMRouterKeeper, 0, pfmrouterkeeper.DefaultForwardTransferPacketTimeoutTimestamp)
 transferStack = ratelimit.NewIBCMiddleware(appKeepers.RatelimitKeeper, transferStack)
-
-// CRITICAL: Set ICS4Wrapper for callbacks
-appKeepers.TransferKeeper.WithICS4Wrapper(cbStack)
+appKeepers.TransferKeeper.WithICS4Wrapper(cb)
 ```
 
 ### Pattern 2: Juno (IBC-go v8 with Hooks)
 
-**Source**: `/Users/cordt/repos/juno/app/keepers/keepers.go:638-648`
+Reference: `../juno/app/keepers/keepers.go`
 
 ```go
 // Stack order: Transfer -> Hooks -> PFM -> Fee -> IBC Core
@@ -101,7 +85,7 @@ transferStack = ibcfee.NewIBCMiddleware(transferStack, appKeepers.IBCFeeKeeper)
 
 ### Pattern 3: Osmosis (Custom Rate Limiting with WASM)
 
-**Source**: `/Users/cordt/repos/osmosis/app/keepers/keepers.go:720-732`
+Reference: `../osmosis/app/keepers/keepers.go`
 
 ```go
 // Custom WASM-based rate limiting implementation
@@ -130,7 +114,7 @@ appKeepers.TransferStack = &hooksTransferModule
 
 ### Pattern 4: Noble (Minimal Middleware)
 
-**Source**: `/Users/cordt/repos/noble/legacy.go:118-132`
+Reference: `../noble/legacy.go`
 
 ```go
 // Minimal stack with custom middleware
@@ -197,18 +181,11 @@ app.TransferKeeper = ibctransferkeeper.NewKeeper(
 ### IBC-go v10 Integration
 
 ```go
-// v10 adds native callbacks support
-// Callbacks middleware is now part of ibc-go core
-
-cbStack := ibccallbacks.NewIBCMiddleware(
-    transferStack,
-    app.PacketForwardKeeper, // Can use PFM keeper as ICS4Wrapper
-    wasmHandler,
-    maxCallbackGas,
-)
-
-// CRITICAL: Update ICS4Wrapper after stack creation
-app.TransferKeeper.WithICS4Wrapper(cbStack)
+// v10 adds callbacks middleware (use setter pattern)
+cb := ibccallbacks.NewIBCMiddleware(wasmHandler, maxCallbackGas)
+cb.SetUnderlyingApplication(transfer.NewIBCModule(app.TransferKeeper))
+cb.SetICS4Wrapper(app.PacketForwardKeeper)
+app.TransferKeeper.WithICS4Wrapper(cb)
 ```
 
 ## Critical Integration Points
@@ -241,18 +218,11 @@ app.PacketForwardKeeper.SetTransferKeeper(app.TransferKeeper)
 
 ### 2. ICS4Wrapper Configuration
 
-**Pattern observed in all production chains**:
+**ICS4Wrapper guidance** (v10):
 
 ```go
-// For packet forward middleware integration
-app.TransferKeeper = ibctransferkeeper.NewKeeper(
-    // ... other params
-    app.PacketForwardKeeper, // Use PFM as ICS4Wrapper instead of channel keeper
-    // ...
-)
-
-// For callbacks (v10)
-app.TransferKeeper.WithICS4Wrapper(cbStack)
+// Ensure transfer sends go through callbacks middleware
+app.TransferKeeper.WithICS4Wrapper(cb)
 ```
 
 ### 3. Store Key Registration
@@ -325,10 +295,9 @@ cd middleware/packet-forward-middleware
 make local-image
 make ictest-forward
 
-# Test rate limiting
+# Rate limiting has unit tests in this repo
 cd modules/rate-limiting
-make local-image
-make ictest-ratelimit
+go test ./...
 
 # Test hooks with contracts
 cd modules/ibc-hooks
@@ -372,15 +341,8 @@ app.IBCKeeper.SetRouter(ibcRouter)
 
 **Solution**: Ensure ICS4Wrapper is set correctly:
 ```go
-// For PFM
-app.TransferKeeper = ibctransferkeeper.NewKeeper(
-    // ...
-    app.PacketForwardKeeper, // Must be PFM keeper, not channel keeper
-    // ...
-)
-
 // For callbacks (v10)
-app.TransferKeeper.WithICS4Wrapper(cbStack)
+app.TransferKeeper.WithICS4Wrapper(cb)
 ```
 
 ### Issue: Incompatible Middleware Combination
@@ -454,12 +416,12 @@ app.IBCKeeper.PortKeeper
 
 - **SDK Integration Guide**: See [sdk-integration-answers.md](./sdk-integration-answers.md) for detailed answers about SDK types, testing, and integration patterns
 
-- Production implementations analyzed:
-  - Gaia: `/Users/cordt/repos/gaia/app/keepers/keepers.go`
-  - Juno: `/Users/cordt/repos/juno/app/keepers/keepers.go`
-  - Neutron: `/Users/cordt/repos/neutron/app/app.go`
-  - Osmosis: `/Users/cordt/repos/osmosis/app/keepers/keepers.go`
-  - Noble: `/Users/cordt/repos/noble/legacy.go`
+- Production implementations analyzed (local checkouts):
+  - Gaia: `../gaia/app/keepers/keepers.go`
+  - Juno: `../juno/app/keepers/keepers.go`
+  - Neutron: `../neutron/app/app.go`
+  - Osmosis: `../osmosis/app/keepers/keepers.go`
+  - Noble: `../noble/legacy.go`
 
 - IBC-go versions:
   - v7: Limited middleware support, no callbacks

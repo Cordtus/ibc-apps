@@ -49,18 +49,18 @@ IBC Hooks operates as middleware in the IBC stack:
 ## Prerequisites
 
 ### Version Requirements
-- **IBC-go**: v7.0.0+ (v8.0.0+ recommended, v10.0.0+ for callbacks alternative)
-- **Cosmos SDK**: v0.47.0+ (v0.50.0+ recommended)
+- **IBC-go**: v7.x–v8.x (v10+ should use Callbacks alternative)
+- **Cosmos SDK**: v0.47.x–v0.50.x
 - **CosmWasm**: wasmd v0.40.0+ (for contract execution)
 - **Go**: 1.21+ (1.23+ recommended)
 
 ### Dependencies
 ```go
 require (
-    github.com/cosmos/ibc-apps/modules/ibc-hooks/v10 v10.0.0
-    github.com/cosmos/ibc-go/v10 v10.1.1
-    github.com/cosmos/cosmos-sdk v0.50.13
-    github.com/CosmWasm/wasmd v0.40.0
+    github.com/cosmos/ibc-apps/modules/ibc-hooks/v8 v8.6.1
+    github.com/cosmos/ibc-go/v8 v8.6.1
+    github.com/cosmos/cosmos-sdk v0.50.x
+    github.com/CosmWasm/wasmd v0.51.x
 )
 ```
 
@@ -70,7 +70,7 @@ require (
 
 Add to your `go.mod`:
 ```bash
-go get github.com/cosmos/ibc-apps/modules/ibc-hooks/v10@latest
+go get github.com/cosmos/ibc-apps/modules/ibc-hooks/v8@latest
 ```
 
 ### Step 2: Import Required Packages
@@ -78,10 +78,10 @@ go get github.com/cosmos/ibc-apps/modules/ibc-hooks/v10@latest
 In your `app/app.go`:
 ```go
 import (
-    ibchooks "github.com/cosmos/ibc-apps/modules/ibc-hooks/v10"
-    ibchookskeeper "github.com/cosmos/ibc-apps/modules/ibc-hooks/v10/keeper"
-    ibchookstypes "github.com/cosmos/ibc-apps/modules/ibc-hooks/v10/types"
-    
+    ibchooks "github.com/cosmos/ibc-apps/modules/ibc-hooks/v8"
+    ibchookskeeper "github.com/cosmos/ibc-apps/modules/ibc-hooks/v8/keeper"
+    ibchookstypes "github.com/cosmos/ibc-apps/modules/ibc-hooks/v8/types"
+
     // If using wasmd
     wasmkeeper "github.com/CosmWasm/wasmd/x/wasm/keeper"
 )
@@ -192,10 +192,8 @@ if app.RateLimitingEnabled {
     transferStack = ratelimit.NewIBCMiddleware(app.RatelimitKeeper, transferStack)
 }
 
-// 5. Update Transfer Keeper's ICS4Wrapper if using packet forward
-if app.PacketForwardEnabled {
-    app.TransferKeeper.WithICS4Wrapper(app.HooksICS4Wrapper)
-}
+// 5. TransferKeeper ICS4Wrapper
+// In v8 production stacks (e.g., Juno) no change is required; leave the default channel keeper.
 
 // 6. Register with IBC router
 ibcRouter := porttypes.NewRouter()
@@ -206,10 +204,10 @@ app.IBCKeeper.SetRouter(ibcRouter)
 ### Step 5: Register Module
 
 ```go
-// In module manager
+// In module manager (register AppModule)
 app.ModuleManager = module.NewManager(
     // ... other modules
-    ibchooks.AppModuleBasic{},
+    ibchooks.NewAppModule(app.AccountKeeper),
 )
 
 // Set module order for Begin/EndBlock

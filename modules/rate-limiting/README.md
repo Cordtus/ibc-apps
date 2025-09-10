@@ -22,9 +22,10 @@ To add the rate limit module, wire it up in `app.go` in line with the following 
 
 // Import the rate limit module
 import (
-  "github.com/cosmos/ibc-apps/modules/rate-limiting/v10/ratelimit"
-  ratelimitkeeper "github.com/cosmos/ibc-apps/modules/rate-limiting/v10/ratelimit/keeper"
-  ratelimittypes "github.com/cosmos/ibc-apps/modules/rate-limiting/v10/ratelimit/types"
+  "github.com/cosmos/cosmos-sdk/runtime"
+  ratelimit "github.com/cosmos/ibc-apps/modules/rate-limiting/v10"
+  ratelimitkeeper "github.com/cosmos/ibc-apps/modules/rate-limiting/v10/keeper"
+  ratelimittypes "github.com/cosmos/ibc-apps/modules/rate-limiting/v10/types"
 )
 
 ...
@@ -55,11 +56,12 @@ keys := sdk.NewKVStoreKeys(
 // Create the rate limit keeper
 app.RatelimitKeeper = *ratelimitkeeper.NewKeeper(
   appCodec,
-  keys[ratelimittypes.StoreKey],
+  runtime.NewKVStoreService(keys[ratelimittypes.StoreKey]),
   app.GetSubspace(ratelimittypes.ModuleName),
   authtypes.NewModuleAddress(govtypes.ModuleName).String(),
   app.BankKeeper,
   app.IBCKeeper.ChannelKeeper,
+  app.IBCKeeper.ClientKeeper,
   app.IBCKeeper.ChannelKeeper, // ICS4Wrapper
 )
 
