@@ -2,9 +2,7 @@
 
 ## Executive Overview
 
-This guide consolidates all documentation and real-world experience for upgrading from Cosmos SDK v0.50 to v0.53, including IBC-Go v8 to v10 migration.
-
-**KEY FINDING**: SDK v0.52 was never stable. The recommended path is **direct migration from v0.50 to v0.53**, as proven by Gaia's production deployment in June 2025.
+This guide consolidates documentation for upgrading from Cosmos SDK v0.50 to v0.53, including IBC-Go v8 to v10 migration.
 
 ## Table of Contents
 
