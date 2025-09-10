@@ -25,7 +25,7 @@ grep -r "capabilitykeeper\|ScopedKeeper" app/
 <binary> export --height <current> > state_backup.json
 ```
 
-⚠️ **STOP HERE** if using IBC Fee Middleware - Must handle escrowed fees (see Phase 1.5)
+ **STOP HERE** if using IBC Fee Middleware - Must handle escrowed fees (see Phase 1.5)
 
 ---
 
@@ -332,20 +332,20 @@ cp backup/<binary> /usr/local/bin/
 
 ## Critical Success Factors
 
-### ✅ Must Complete
+###  Must Complete
 1. Remove ALL capability module references
 2. Remove ALL scoped keepers
 3. Update ALL keepers to use KVStoreService
 4. Wire light client modules
 5. Handle fee middleware removal (if applicable)
 
-### ⚠️ Common Mistakes
+###  Common Mistakes
 1. Forgetting to wire light clients → IBC breaks
 2. Missing a keeper KVStoreService update → Panic at startup
 3. Not handling escrowed fees → Tokens locked forever
 4. Wrong import paths → Compilation errors
 
-### 📊 Success Metrics
+###  Success Metrics
 - Chain resumes in <6 hours
 - >95% validator participation post-upgrade
 - IBC transfers functional immediately

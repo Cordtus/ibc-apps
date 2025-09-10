@@ -1,12 +1,12 @@
 # SDK v0.50 to v0.53 Upgrade: Complete Resource Guide
 
-## 📚 Available Documentation
+##  Available Documentation
 
 This repository contains comprehensive documentation to guide teams through the SDK v0.50 to v0.53 upgrade process. Here's what we have:
 
 ### Core Upgrade Guides
 
-#### 1. **[COMPREHENSIVE-SDK-v050-to-v053-UPGRADE-GUIDE.md](./COMPREHENSIVE-SDK-v050-to-v053-UPGRADE-GUIDE.md)** ⭐ START HERE
+#### 1. **[COMPREHENSIVE-SDK-v050-to-v053-UPGRADE-GUIDE.md](./COMPREHENSIVE-SDK-v050-to-v053-UPGRADE-GUIDE.md)**  START HERE
 - Complete step-by-step migration process
 - All breaking changes with code examples
 - Upgrade handler implementation
@@ -33,7 +33,7 @@ This repository contains comprehensive documentation to guide teams through the 
 
 ### Critical Migration Topics
 
-#### 4. **[DEPRECATED-MIDDLEWARE-MIGRATION.md](./DEPRECATED-MIDDLEWARE-MIGRATION.md)** ⚠️ CRITICAL
+#### 4. **[DEPRECATED-MIDDLEWARE-MIGRATION.md](./DEPRECATED-MIDDLEWARE-MIGRATION.md)**  CRITICAL
 **Must read if using IBC Fee Middleware (ICS-29)**
 - Complete removal strategy for fee middleware
 - Handling escrowed fees before upgrade
@@ -95,7 +95,7 @@ This repository contains comprehensive documentation to guide teams through the 
 
 ---
 
-## 🚀 Quick Start Guide
+##  Quick Start Guide
 
 ### For Teams Starting the Upgrade
 
@@ -115,7 +115,7 @@ This repository contains comprehensive documentation to guide teams through the 
 
 ---
 
-## ⚠️ Critical Breaking Changes
+##  Critical Breaking Changes
 
 ### Must Remove Completely
 1. **Capability Module** - Entirely removed from IBC-Go v10
@@ -131,7 +131,7 @@ This repository contains comprehensive documentation to guide teams through the 
 
 ---
 
-## 📊 Version Matrix
+##  Version Matrix
 
 | Component | Current (v0.50) | Target (v0.53) | Status |
 |-----------|----------------|----------------|--------|
@@ -139,14 +139,14 @@ This repository contains comprehensive documentation to guide teams through the 
 | **IBC-Go** | v8.x | v10.3.0+ | Stable, Production Ready |
 | **Go** | 1.21+ | 1.23.8+ | Required |
 | **IBC-Apps Modules** | | | |
-| - Rate Limiting | - | v10 | Updated ✅ |
-| - Packet Forward | - | v10 | Updated ✅ |
-| - IBC-Hooks | v7 | v8 | Updated for IBC v10 ✅ |
-| - Async ICQ | - | v8 | Needs Update ⚠️ |
+| - Rate Limiting | - | v10 | Updated  |
+| - Packet Forward | - | v10 | Updated  |
+| - IBC-Hooks | v7 | v8 | Updated for IBC v10  |
+| - Async ICQ | - | v8 | Needs Update  |
 
 ---
 
-## 🔍 Real-World Evidence
+##  Real-World Evidence
 
 ### Production Deployments
 
@@ -162,15 +162,15 @@ This repository contains comprehensive documentation to guide teams through the 
 
 ### Key Takeaways from Production
 
-- ✅ Direct v0.50 → v0.53 migration works perfectly
-- ✅ v0.52 can be safely skipped (was never stable)
-- ✅ Minimal upgrade handler required (just `RunMigrations`)
-- ✅ IBC v10 with callbacks operational
-- ✅ All capability references successfully removed
+-  Direct v0.50 → v0.53 migration works perfectly
+-  v0.52 can be safely skipped (was never stable)
+-  Minimal upgrade handler required (just `RunMigrations`)
+-  IBC v10 with callbacks operational
+-  All capability references successfully removed
 
 ---
 
-## 🛠 Tools and Scripts
+##  Tools and Scripts
 
 ### Verification Scripts
 
@@ -202,7 +202,7 @@ func CreateUpgradeHandler(
 
 ---
 
-## 📞 Support Resources
+##  Support Resources
 
 ### Official Documentation
 - [Cosmos SDK v0.53 UPGRADING.md](https://github.com/cosmos/cosmos-sdk/blob/v0.53.0/UPGRADING.md)
@@ -221,7 +221,7 @@ func CreateUpgradeHandler(
 
 ---
 
-## ✅ Pre-Upgrade Checklist
+##  Pre-Upgrade Checklist
 
 Before starting your upgrade:
 
@@ -236,7 +236,7 @@ Before starting your upgrade:
 
 ---
 
-## 🎯 Success Criteria
+##  Success Criteria
 
 Your upgrade is successful when:
 
@@ -250,7 +250,7 @@ Your upgrade is successful when:
 
 ---
 
-## 📝 Notes
+##  Notes
 
 - **Documentation Quality**: All code examples in module READMEs have been verified and fixed
 - **Version Accuracy**: Version requirements have been updated to reflect actual dependencies

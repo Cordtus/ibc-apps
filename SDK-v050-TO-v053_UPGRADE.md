@@ -54,33 +54,33 @@ This guide consolidates all documentation and real-world experience for upgradin
 #### 1. Capability Module - COMPLETE REMOVAL
 ```go
 // REMOVE ALL OF THESE:
-❌ capabilitykeeper "github.com/cosmos/ibc-go/modules/capability/keeper"
-❌ capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
-❌ CapabilityKeeper *capabilitykeeper.Keeper
-❌ ScopedIBCKeeper capabilitykeeper.ScopedKeeper
-❌ ScopedTransferKeeper capabilitykeeper.ScopedKeeper
-❌ ScopedICAHostKeeper capabilitykeeper.ScopedKeeper
-❌ ScopedICAControllerKeeper capabilitykeeper.ScopedKeeper
+ capabilitykeeper "github.com/cosmos/ibc-go/modules/capability/keeper"
+ capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
+ CapabilityKeeper *capabilitykeeper.Keeper
+ ScopedIBCKeeper capabilitykeeper.ScopedKeeper
+ ScopedTransferKeeper capabilitykeeper.ScopedKeeper
+ ScopedICAHostKeeper capabilitykeeper.ScopedKeeper
+ ScopedICAControllerKeeper capabilitykeeper.ScopedKeeper
 ```
 
 #### 2. IBC Fee Middleware - COMPLETE REMOVAL
 ```go
 // REMOVE ALL OF THESE:
-❌ ibcfee "github.com/cosmos/ibc-go/v8/modules/apps/29-fee"
-❌ ibcfeekeeper "github.com/cosmos/ibc-go/v8/modules/apps/29-fee/keeper"
-❌ ibcfeetypes "github.com/cosmos/ibc-go/v8/modules/apps/29-fee/types"
-❌ IBCFeeKeeper ibcfeekeeper.Keeper
+ ibcfee "github.com/cosmos/ibc-go/v8/modules/apps/29-fee"
+ ibcfeekeeper "github.com/cosmos/ibc-go/v8/modules/apps/29-fee/keeper"
+ ibcfeetypes "github.com/cosmos/ibc-go/v8/modules/apps/29-fee/types"
+ IBCFeeKeeper ibcfeekeeper.Keeper
 ```
 
 #### 3. BasicModuleManager - REMOVED
 ```go
 // OLD
-❌ app.BasicModuleManager = module.NewBasicManagerFromManager(...)
-❌ app.BasicModuleManager.RegisterLegacyAminoCodec(legacyAmino)
+ app.BasicModuleManager = module.NewBasicManagerFromManager(...)
+ app.BasicModuleManager.RegisterLegacyAminoCodec(legacyAmino)
 
 // NEW
-✅ app.ModuleManager.RegisterLegacyAminoCodec(legacyAmino)
-✅ app.ModuleManager.RegisterInterfaces(interfaceRegistry)
+ app.ModuleManager.RegisterLegacyAminoCodec(legacyAmino)
+ app.ModuleManager.RegisterInterfaces(interfaceRegistry)
 ```
 
 ### Required Changes (Must Update)
@@ -88,21 +88,21 @@ This guide consolidates all documentation and real-world experience for upgradin
 #### 1. Store Service Migration - ALL KEEPERS
 ```go
 // OLD - Direct StoreKey
-❌ keeper.NewKeeper(codec, keys[types.StoreKey], ...)
+ keeper.NewKeeper(codec, keys[types.StoreKey], ...)
 
 // NEW - KVStoreService
-✅ keeper.NewKeeper(codec, runtime.NewKVStoreService(keys[types.StoreKey]), ...)
+ keeper.NewKeeper(codec, runtime.NewKVStoreService(keys[types.StoreKey]), ...)
 ```
 
 #### 2. Import Path Updates - SDK MODULES
 ```go
 // OLD
-❌ import "github.com/cosmos/cosmos-sdk/x/bank"
-❌ import "github.com/cosmos/cosmos-sdk/x/staking"
+ import "github.com/cosmos/cosmos-sdk/x/bank"
+ import "github.com/cosmos/cosmos-sdk/x/staking"
 
 // NEW
-✅ import "cosmossdk.io/x/bank"
-✅ import "cosmossdk.io/x/staking"
+ import "cosmossdk.io/x/bank"
+ import "cosmossdk.io/x/staking"
 ```
 
 ---
@@ -183,18 +183,18 @@ app.IBCKeeper = ibckeeper.NewKeeper(
     appCodec,
     keys[ibcexported.StoreKey],
     app.GetSubspace(ibcexported.ModuleName),
-    app.StakingKeeper,     // ❌ REMOVED
+    app.StakingKeeper,     //  REMOVED
     app.UpgradeKeeper,
-    scopedIBCKeeper,       // ❌ REMOVED
+    scopedIBCKeeper,       //  REMOVED
 )
 
 // NEW
 app.IBCKeeper = ibckeeper.NewKeeper(
     appCodec,
-    runtime.NewKVStoreService(keys[ibcexported.StoreKey]), // ✅ KVStoreService
+    runtime.NewKVStoreService(keys[ibcexported.StoreKey]), //  KVStoreService
     app.GetSubspace(ibcexported.ModuleName),
-    app.UpgradeKeeper,     // ✅ No StakingKeeper
-    authtypes.NewModuleAddress(govtypes.ModuleName).String(), // ✅ Authority
+    app.UpgradeKeeper,     //  No StakingKeeper
+    authtypes.NewModuleAddress(govtypes.ModuleName).String(), //  Authority
 )
 ```
 
@@ -207,7 +207,7 @@ app.TransferKeeper = ibctransferkeeper.NewKeeper(
     app.GetSubspace(ibctransfertypes.ModuleName),
     app.IBCKeeper.ChannelKeeper,
     app.IBCKeeper.ChannelKeeper, // ICS4Wrapper
-    app.MsgServiceRouter(),      // ✅ Replaces PortKeeper
+    app.MsgServiceRouter(),      //  Replaces PortKeeper
     app.AccountKeeper,
     app.BankKeeper,
     authtypes.NewModuleAddress(govtypes.ModuleName).String(),
@@ -225,7 +225,7 @@ app.ICAHostKeeper = icahostkeeper.NewKeeper(
     app.IBCKeeper.ChannelKeeper, // ICS4Wrapper
     app.AccountKeeper,
     app.MsgServiceRouter(),
-    app.GRPCQueryRouter(),        // ✅ Now in constructor
+    app.GRPCQueryRouter(),        //  Now in constructor
     authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 )
 // Note: No WithQueryRouter() call needed anymore
@@ -257,7 +257,7 @@ if app.WasmClientKeeper != nil {
 
 **OLD Stack with Fee Middleware:**
 ```go
-// ❌ OLD - With fee middleware
+//  OLD - With fee middleware
 var transferStack porttypes.IBCModule
 transferStack = transfer.NewIBCModule(app.TransferKeeper)
 transferStack = ibcfee.NewIBCMiddleware(transferStack, app.IBCFeeKeeper)
@@ -268,7 +268,7 @@ transferStack = router.NewIBCMiddleware(transferStack, app.RouterKeeper)
 
 **Option A: With IBC Callbacks (Native)**
 ```go
-// ✅ NEW - With native callbacks
+//  NEW - With native callbacks
 var transferStack porttypes.IBCModule
 transferStack = transfer.NewIBCModule(app.TransferKeeper)
 transferStack = ibccallbacks.NewIBCMiddleware(
@@ -281,7 +281,7 @@ transferStack = ibccallbacks.NewIBCMiddleware(
 
 **Option B: With IBC-Hooks (External)**
 ```go
-// ✅ NEW - With IBC-hooks
+//  NEW - With IBC-hooks
 import ibchooks "github.com/cosmos/ibc-apps/modules/ibc-hooks/v8"
 
 app.IBCHooksKeeper = ibchookskeeper.NewKeeper(
